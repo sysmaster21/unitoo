@@ -14,7 +14,7 @@ import org.master.unitoo.core.api.annotation.Attribute;
  *
  * @author Andrey
  */
-public abstract class SimpleLog extends BaseLogger {
+public abstract class FileLogger extends BaseLogger {
 
     @Attribute(name = "pattern", value = "[%d{yyyy-MM-dd HH:mm:ss.SSS}] %-5level %-28.28thread %-64.64logger{64} %msg %ex%n")
     public Setting<String> pattern;
