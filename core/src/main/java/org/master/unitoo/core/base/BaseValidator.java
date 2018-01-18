@@ -7,6 +7,7 @@ package org.master.unitoo.core.base;
 
 import org.master.unitoo.core.api.IApplication;
 import org.master.unitoo.core.api.IBootInfo;
+import org.master.unitoo.core.api.ILogger;
 import org.master.unitoo.core.api.components.IValidator;
 import org.master.unitoo.core.types.ComponentContext;
 import org.master.unitoo.core.types.ComponentType;
@@ -14,10 +15,12 @@ import org.master.unitoo.core.types.ComponentType;
 /**
  *
  * @author Andrey
+ * @param <T>
  */
 public abstract class BaseValidator<T> implements IValidator<T> {
 
     private ComponentContext context;
+    private ILogger logger;
 
     @Override
     public void init(ComponentContext context) {
@@ -61,6 +64,14 @@ public abstract class BaseValidator<T> implements IValidator<T> {
     @Override
     public IBootInfo boot() {
         return context.boot();
+    }
+
+    @Override
+    public ILogger log() {
+        if (logger == null) {
+            logger = app().log(context.logger(), getClass());
+        }
+        return logger;
     }
 
 }

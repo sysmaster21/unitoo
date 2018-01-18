@@ -6,19 +6,17 @@
 package org.master.unitoo.core.api.components;
 
 import org.master.unitoo.core.api.IControllerMethod;
-import org.master.unitoo.core.api.ILogger;
+import org.master.unitoo.core.api.ILoggableComponent;
 import org.master.unitoo.core.api.IStoppableComponent;
 
 /**
  *
  * @author Andrey
  */
-public interface IController extends IStoppableComponent {
+public interface IController extends IStoppableComponent, ILoggableComponent {
 
     String url();
 
     Iterable<IControllerMethod> methods();
-
-    ILogger log();
 
 }

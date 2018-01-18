@@ -241,7 +241,8 @@ public abstract class BaseController implements IController {
                 BaseController parent,
                 Method method) {
 
-            this.mapping = rqMapping.value() == null || "/".equals(rqMapping.value()) ? base : base + rqMapping.value().trim();
+            String name = rqMapping.value() == null || rqMapping.value().isEmpty() ? method.getName() : rqMapping.value();
+            this.mapping = "/".equals(name) ? base : base + name.trim();
             this.errorHanlerClass = rqMapping.errors();
             this.parent = parent;
             this.method = method;

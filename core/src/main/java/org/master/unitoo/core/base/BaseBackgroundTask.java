@@ -69,6 +69,7 @@ public abstract class BaseBackgroundTask implements IBackgroundTask {
         return context.application();
     }
 
+    @Override
     public ILogger log() {
         if (logger == null) {
             logger = app().log(context.logger(), getClass());

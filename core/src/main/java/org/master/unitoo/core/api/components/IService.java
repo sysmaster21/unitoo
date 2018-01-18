@@ -7,12 +7,13 @@ package org.master.unitoo.core.api.components;
 
 import org.master.unitoo.core.api.IAutowired;
 import org.master.unitoo.core.api.IInterfacedComponent;
+import org.master.unitoo.core.api.ILoggableComponent;
 import org.master.unitoo.core.api.IStoppableComponent;
 
 /**
  *
  * @author Andrey
  */
-public interface IService extends IStoppableComponent, IAutowired, IInterfacedComponent {
+public interface IService extends IStoppableComponent, IAutowired, IInterfacedComponent, ILoggableComponent {
 
 }

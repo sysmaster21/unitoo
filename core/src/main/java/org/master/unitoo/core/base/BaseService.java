@@ -45,6 +45,7 @@ public class BaseService implements IService {
         return ComponentType.Service;
     }
 
+    @Override
     public ILogger log() {
         if (logger == null) {
             logger = app().log(context.logger(), getClass());

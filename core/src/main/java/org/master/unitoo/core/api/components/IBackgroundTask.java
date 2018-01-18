@@ -5,6 +5,7 @@
  */
 package org.master.unitoo.core.api.components;
 
+import org.master.unitoo.core.api.ILoggableComponent;
 import org.master.unitoo.core.api.IStoppableComponent;
 import org.master.unitoo.core.types.DateTime;
 
@@ -12,7 +13,7 @@ import org.master.unitoo.core.types.DateTime;
  *
  * @author Andrey
  */
-public interface IBackgroundTask extends IStoppableComponent, Runnable {
+public interface IBackgroundTask extends IStoppableComponent, ILoggableComponent, Runnable {
 
     DateTime nextRun();
 

@@ -7,13 +7,14 @@ package org.master.unitoo.core.api.components;
 
 import org.master.unitoo.core.api.IAutowired;
 import org.master.unitoo.core.api.IComponent;
+import org.master.unitoo.core.api.ILoggableComponent;
 
 /**
  *
  * @author Andrey
  * @param <T>
  */
-public interface IValidator<T> extends IComponent, IAutowired {
+public interface IValidator<T> extends IComponent, IAutowired, ILoggableComponent {
 
     T validate(T value);
 

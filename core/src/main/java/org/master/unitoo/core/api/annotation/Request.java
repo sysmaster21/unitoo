@@ -23,7 +23,7 @@ import org.master.unitoo.core.types.SecureLevel;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Request {
 
-    String value();
+    String value() default "";
 
     RequestMethod[] type() default {
         RequestMethod.GET,
