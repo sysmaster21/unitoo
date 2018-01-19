@@ -16,6 +16,8 @@ public interface IUser<T> {
 
     T id();
 
+    String login();
+
     String name();
 
     ILanguage language();

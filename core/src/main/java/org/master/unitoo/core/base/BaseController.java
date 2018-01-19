@@ -546,6 +546,14 @@ public abstract class BaseController implements IController {
             return validate(result, param);
         }
 
+        private int available(InputStream stream) {
+            try {
+                return stream.available();
+            } catch (IOException ignore) {
+                return 0;
+            }
+        }
+
         private void flush(HttpServletResponse resp, Object obj, ILogger log) throws IOException {
             String contentType;
             if (outMime.isEmpty()) {
@@ -587,6 +595,8 @@ public abstract class BaseController implements IController {
 
             if (validation.min() != 0 && value != null) {
                 if ((value instanceof String && ((String) value).length() < validation.min())
+                        || (value instanceof byte[] && ((byte[]) value).length < validation.min())
+                        || (value instanceof InputStream && available(((InputStream) value)) < validation.min())
                         || (value instanceof Number && ((Number) value).doubleValue() < validation.min())
                         || (value instanceof Date && ((Date) value).getTime() < validation.min())) {
                     throw new ParameterRangeException(param.name(), validation.min(), validation.max());
@@ -595,6 +605,8 @@ public abstract class BaseController implements IController {
 
             if (validation.max() != 0 && value != null) {
                 if ((value instanceof String && ((String) value).length() > validation.max())
+                        || (value instanceof byte[] && ((byte[]) value).length > validation.max())
+                        || (value instanceof InputStream && available(((InputStream) value)) > validation.max())
                         || (value instanceof Number && ((Number) value).doubleValue() > validation.max())
                         || (value instanceof Date && ((Date) value).getTime() > validation.max())) {
                     throw new ParameterRangeException(param.name(), validation.min(), validation.max());
