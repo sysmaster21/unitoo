@@ -30,6 +30,11 @@ public class PropertiesI18nManager extends PropertiesExternalValuesManager<ILang
         return ComponentType.ConfigManager;
     }
 
+    @Override
+    public Object getItemCode(Object item) {
+        return item;
+    }
+
     protected static class LangProps extends PropertiesStorage<ILanguage, Object, PropertiesI18nManager> {
 
         public LangProps(File folder, PropertiesI18nManager parent, ILanguage source) {

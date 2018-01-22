@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class ParameterMaskException extends ParameterInvalidException {
 
     public ParameterMaskException(String name, String mask) {
-        super(SystemErrorCodes.ParameterMaskException, "Parameter %1$s not match to '%2s'", name, mask);
+        super(SystemErrorCodes.UTS_ParameterMaskException, "Parameter %1$s not match to '%2s'", name, mask);
     }
 }

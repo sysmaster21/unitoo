@@ -12,10 +12,10 @@ package org.master.unitoo.core.errors;
 public class AttributeSetException extends UnitooException {
 
     public AttributeSetException(String name) {
-        super(SystemErrorCodes.AttributeSetException, "Attribute %1$s failed to set value", name);
+        super(SystemErrorCodes.UTS_AttributeSetException, "Attribute %1$s failed to set value", name);
     }
 
     public AttributeSetException(String name, Throwable t) {
-        super(SystemErrorCodes.AttributeGetException, t, "Attribute %1$s failed to set value", name);
+        super(SystemErrorCodes.UTS_AttributeGetException, t, "Attribute %1$s failed to set value", name);
     }
 }

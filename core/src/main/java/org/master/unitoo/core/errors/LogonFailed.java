@@ -12,10 +12,10 @@ package org.master.unitoo.core.errors;
 public class LogonFailed extends UnitooException {
 
     public LogonFailed() {
-        super(SystemErrorCodes.LogonFailed);
+        super(SystemErrorCodes.UTS_LogonFailed);
     }
 
     public LogonFailed(Throwable t) {
-        super(SystemErrorCodes.LogonFailed, t);
+        super(SystemErrorCodes.UTS_LogonFailed, t);
     }
 }

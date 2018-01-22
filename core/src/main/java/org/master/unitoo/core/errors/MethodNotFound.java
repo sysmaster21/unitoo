@@ -12,10 +12,10 @@ package org.master.unitoo.core.errors;
 public class MethodNotFound extends UnitooException {
 
     public MethodNotFound(String method) {
-        super(SystemErrorCodes.MethodNotFound, "Method '%1$s' not found", method);
+        super(SystemErrorCodes.UTS_MethodNotFound, "Method '%1$s' not found", method);
     }
 
     public MethodNotFound(String method, Throwable t) {
-        super(SystemErrorCodes.MethodNotFound, "Method '%1$s' not found", t, method);
+        super(SystemErrorCodes.UTS_MethodNotFound, "Method '%1$s' not found", t, method);
     }
 }

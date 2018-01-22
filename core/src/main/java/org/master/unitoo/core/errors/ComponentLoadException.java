@@ -12,10 +12,10 @@ package org.master.unitoo.core.errors;
 public class ComponentLoadException extends UnitooException {
 
     public ComponentLoadException(String name) {
-        super(SystemErrorCodes.ComponentLoadException, "Fail to load component '%1$s'", name);
+        super(SystemErrorCodes.UTS_ComponentLoadException, "Fail to load component '%1$s'", name);
     }
 
     public ComponentLoadException(String name, Throwable t) {
-        super(SystemErrorCodes.ComponentLoadException, "Fail to load component '%1$s'", t, name);
+        super(SystemErrorCodes.UTS_ComponentLoadException, "Fail to load component '%1$s'", t, name);
     }
 }

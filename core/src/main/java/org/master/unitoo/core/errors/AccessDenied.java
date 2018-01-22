@@ -12,10 +12,10 @@ package org.master.unitoo.core.errors;
 public class AccessDenied extends UnitooException {
 
     public AccessDenied(String method) {
-        super(SystemErrorCodes.AccessDenied, "Method '%1$s' access denied", method);
+        super(SystemErrorCodes.UTS_AccessDenied, "Method '%1$s' access denied", method);
     }
 
     public AccessDenied(String method, Throwable t) {
-        super(SystemErrorCodes.AccessDenied, "Method '%1$s' access denied", t, method);
+        super(SystemErrorCodes.UTS_AccessDenied, "Method '%1$s' access denied", t, method);
     }
 }

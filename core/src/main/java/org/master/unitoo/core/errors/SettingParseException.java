@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class SettingParseException extends UnitooException {
 
     public SettingParseException(String source, String name, Throwable t) {
-        super(SystemErrorCodes.SettingParseException, "Setting '%1$s' parse error (%2$s)", t, name, source);
+        super(SystemErrorCodes.UTS_SettingParseException, "Setting '%1$s' parse error (%2$s)", t, name, source);
     }
 }

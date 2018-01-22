@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class ParameterEmptyException extends ParameterInvalidException {
 
     public ParameterEmptyException(String name) {
-        super(SystemErrorCodes.EmptyParameterException, "Parameter %1$s is mandatory", name);
+        super(SystemErrorCodes.UTS_EmptyParameterException, "Parameter %1$s is mandatory", name);
     }
 }

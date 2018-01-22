@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class StorageCreateException extends UnitooException {
 
     public StorageCreateException(String name, Throwable t) {
-        super(SystemErrorCodes.StorageCreateException, "Storage '%1$s' create failed", t, name);
+        super(SystemErrorCodes.UTS_StorageCreateException, "Storage '%1$s' create failed", t, name);
     }
 }

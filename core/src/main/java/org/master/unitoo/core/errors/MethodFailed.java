@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class MethodFailed extends UnitooException {
 
     public MethodFailed(String method, Throwable t) {
-        super(SystemErrorCodes.MethodFailed, "Method '%1$s' failed to execute", t, method);
+        super(SystemErrorCodes.UTS_MethodFailed, "Method '%1$s' failed to execute", t, method);
     }
 }

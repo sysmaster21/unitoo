@@ -61,6 +61,6 @@ public class UnitooException extends IOException {
     }
 
     public String code() {
-        return type == null ? SystemErrorCodes.SystemException.code() : type.code();
+        return type == null ? SystemErrorCodes.UTS_SystemException.code() : type.code();
     }
 }

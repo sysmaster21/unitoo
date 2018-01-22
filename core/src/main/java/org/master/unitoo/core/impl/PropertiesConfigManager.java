@@ -32,6 +32,11 @@ public class PropertiesConfigManager extends PropertiesExternalValuesManager<Ser
         return ComponentType.ConfigManager;
     }
 
+    @Override
+    public Object getItemCode(Object item) {
+        return item;
+    }
+
     protected static class ConfigProps extends PropertiesStorage<ServerConfig, Object, PropertiesConfigManager> {
 
         public ConfigProps(File folder, PropertiesConfigManager parent, ServerConfig source) {

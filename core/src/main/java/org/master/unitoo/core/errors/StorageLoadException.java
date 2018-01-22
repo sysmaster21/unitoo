@@ -12,7 +12,7 @@ package org.master.unitoo.core.errors;
 public class StorageLoadException extends UnitooException {
 
     public StorageLoadException(String name, Throwable t) {
-        super(SystemErrorCodes.StorageLoadException, "Storage '%1$s' loading failed", t, name);
+        super(SystemErrorCodes.UTS_StorageLoadException, "Storage '%1$s' loading failed", t, name);
     }
 
 }

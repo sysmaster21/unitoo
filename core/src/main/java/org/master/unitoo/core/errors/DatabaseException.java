@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class DatabaseException extends UnitooException {
 
     public DatabaseException(Throwable t) {
-        super(SystemErrorCodes.DatabaseException, "Database error", t);
+        super(SystemErrorCodes.UTS_DatabaseException, "Database error", t);
     }
 }

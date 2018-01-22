@@ -12,10 +12,10 @@ package org.master.unitoo.core.errors;
 public class InvalidSession extends UnitooException {
 
     public InvalidSession() {
-        super(SystemErrorCodes.InvalidSession);
+        super(SystemErrorCodes.UTS_InvalidSession);
     }
 
     public InvalidSession(Throwable t) {
-        super(SystemErrorCodes.InvalidSession, t);
+        super(SystemErrorCodes.UTS_InvalidSession, t);
     }
 }

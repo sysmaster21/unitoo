@@ -13,6 +13,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Properties;
@@ -36,10 +37,11 @@ import org.master.unitoo.core.types.CRUD;
  */
 public abstract class PropertiesStorage<T, P, M extends PropertiesExternalValuesManager> implements IExternalStorage<T, P>, IMonitorListener<FileMonitorEvent> {
 
-    private static final String NULL = "<--null-->";
+    protected static final String NULL = "<--null-->";
+    protected static final String ATTR_DELIMITER = "$";
 
     private final File file;
-    private final M parent;
+    private final M manager;
     private final T source;
     private Properties props;
     private IMonitor<FileMonitorEvent> monitor;
@@ -47,32 +49,42 @@ public abstract class PropertiesStorage<T, P, M extends PropertiesExternalValues
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
     public PropertiesStorage(File folder, M parent, T source) {
-        this.parent = parent;
+        this.manager = parent;
         this.source = source;
         this.file = fileName() == null ? folder : new File(folder, fileName());
     }
 
     public M manager() {
-        return parent;
+        return manager;
+    }
+
+    protected String keyOf(String name, P parent, Class type) {
+        String key;
+        if (parent == null) {
+            key = name;
+        } else {
+            key = manager().app().format(manager.getItemCode(parent)) + ATTR_DELIMITER + name;
+        }
+        return key;
     }
 
     @Override
     public boolean hasValue(String name, P parent, Class type) {
-        return props.containsKey(name);
+        return props.containsKey(keyOf(name, parent, type));
     }
 
     @Override
     public Object getValue(String name, P parent, Class type) {
-        String value = props.getProperty(name);
+        String value = props.getProperty(keyOf(name, parent, type));
         return NULL.equals(value) ? null : value;
     }
 
     @Override
     public void putValue(String name, Object value, P parent, Class type) {
         if (value == null) {
-            props.setProperty(name, NULL);
+            props.setProperty(keyOf(name, parent, type), NULL);
         } else {
-            props.setProperty(name, this.parent.app().format(value));
+            props.setProperty(keyOf(name, parent, type), this.manager.app().format(value));
         }
     }
 
@@ -134,7 +146,14 @@ public abstract class PropertiesStorage<T, P, M extends PropertiesExternalValues
 
     @Override
     public Iterable<String> keys() {
-        return props.stringPropertyNames();
+        ArrayList<String> keys = new ArrayList<>();
+        for (String prop : props.stringPropertyNames()) {
+            if (!prop.contains(ATTR_DELIMITER)) {
+                int c = prop.lastIndexOf(".");
+                keys.add(prop.substring(c + 1));
+            }
+        }
+        return keys;
     }
 
     protected abstract String fileName();

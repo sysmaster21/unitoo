@@ -12,7 +12,7 @@ package org.master.unitoo.core.errors;
 public class NoSecurityException extends UnitooException {
 
     public NoSecurityException() {
-        super(SystemErrorCodes.NoSecurityException);
+        super(SystemErrorCodes.UTS_NoSecurityException);
     }
 
 }

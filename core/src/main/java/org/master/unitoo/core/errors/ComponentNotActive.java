@@ -12,10 +12,10 @@ package org.master.unitoo.core.errors;
 public class ComponentNotActive extends UnitooException {
 
     public ComponentNotActive(String name) {
-        super(SystemErrorCodes.ComponentNotActive, "Component '%1$s' is not active", name);
+        super(SystemErrorCodes.UTS_ComponentNotActive, "Component '%1$s' is not active", name);
     }
 
     public ComponentNotActive(String name, Throwable t) {
-        super(SystemErrorCodes.ComponentNotActive, "Component '%1$s' is not active", t, name);
+        super(SystemErrorCodes.UTS_ComponentNotActive, "Component '%1$s' is not active", t, name);
     }
 }

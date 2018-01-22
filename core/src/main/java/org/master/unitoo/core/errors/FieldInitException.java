@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class FieldInitException extends UnitooException {
 
     public FieldInitException(String name, Class clazz, Throwable t) {
-        super(SystemErrorCodes.FieldInitException, "Field %1$s initialization failed in class %2$s", t, name, clazz.getName());
+        super(SystemErrorCodes.UTS_FieldInitException, "Field %1$s initialization failed in class %2$s", t, name, clazz.getName());
     }
 }

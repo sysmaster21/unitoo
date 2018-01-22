@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class XMLTranformException extends UnitooException {
 
     public XMLTranformException(Throwable t) {
-        super(SystemErrorCodes.XMLTranformException, "XML transformation failed", t);
+        super(SystemErrorCodes.UTS_XMLTranformException, "XML transformation failed", t);
     }
 }

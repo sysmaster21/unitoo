@@ -14,7 +14,7 @@ import org.master.unitoo.core.api.IErrorType;
 public class ParameterInvalidException extends UnitooException {
 
     public ParameterInvalidException(String name) {
-        super(SystemErrorCodes.InvalidParameterException, "Parameter %1$s is invalid", name);
+        super(SystemErrorCodes.UTS_InvalidParameterException, "Parameter %1$s is invalid", name);
     }
 
     protected ParameterInvalidException(IErrorType code, String message, Throwable t, Object... params) {

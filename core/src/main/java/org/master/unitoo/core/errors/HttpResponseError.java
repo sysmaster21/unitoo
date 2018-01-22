@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class HttpResponseError extends UnitooException {
 
     public HttpResponseError(Integer code) {
-        super(SystemErrorCodes.HttpResponseError, "HTTP response error '%1$d'", code);
+        super(SystemErrorCodes.UTS_HttpResponseError, "HTTP response error '%1$d'", code);
     }
 }

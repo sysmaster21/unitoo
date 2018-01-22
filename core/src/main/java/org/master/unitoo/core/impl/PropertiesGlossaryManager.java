@@ -20,8 +20,6 @@ import org.master.unitoo.core.types.ComponentType;
 @Component("glossary-props")
 public class PropertiesGlossaryManager extends PropertiesExternalValuesManager<IStoredGlossary, IGlossaryItem> implements IGlossaryManager {
 
-    private static final String ATTR_DELIMITER = "$";
-
     @Override
     protected GlossProps create(IStoredGlossary source) {
         File parent = new File(app().homeFolder() + File.separator + "lists");
@@ -34,47 +32,15 @@ public class PropertiesGlossaryManager extends PropertiesExternalValuesManager<I
         return ComponentType.GlossaryManager;
     }
 
+    @Override
+    public Object getItemCode(IGlossaryItem item) {
+        return item.code();
+    }
+
     protected static class GlossProps extends PropertiesStorage<IStoredGlossary, IGlossaryItem, PropertiesGlossaryManager> {
 
         public GlossProps(File folder, PropertiesGlossaryManager parent, IStoredGlossary source) {
             super(folder, parent, source);
-        }
-
-        private String keyOf(String name, IGlossaryItem parent, Class type) {
-            String key;
-            if (parent == null) {
-                key = source().name() + "." + name;
-            } else {
-                key = source().name() + "." + manager().app().format(parent.code()) + ATTR_DELIMITER + name;
-            }
-            return key;
-        }
-
-        @Override
-        public boolean hasValue(String name, IGlossaryItem parent, Class type) {
-            return super.hasValue(keyOf(name, parent, type), parent, type);
-        }
-
-        @Override
-        public Object getValue(String name, IGlossaryItem parent, Class type) {
-            return super.getValue(keyOf(name, parent, type), parent, type);
-        }
-
-        @Override
-        public void putValue(String name, Object value, IGlossaryItem parent, Class type) {
-            super.putValue(keyOf(name, parent, type), value, parent, type);
-        }
-
-        @Override
-        public Iterable<String> keys() {
-            ArrayList<String> keys = new ArrayList<>();
-            for (String prop : super.keys()) {
-                if (!prop.contains(ATTR_DELIMITER)) {
-                    int c = prop.lastIndexOf(".");
-                    keys.add(prop.substring(c + 1));
-                }
-            }
-            return keys;
         }
 
         @Override

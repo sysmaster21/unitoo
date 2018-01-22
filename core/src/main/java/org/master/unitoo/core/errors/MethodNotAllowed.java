@@ -12,10 +12,10 @@ package org.master.unitoo.core.errors;
 public class MethodNotAllowed extends UnitooException {
 
     public MethodNotAllowed(String method, String mapping) {
-        super(SystemErrorCodes.MethodNotAllowed, "Method '%1$s' is not supported for mapping: '%2s'", method, mapping);
+        super(SystemErrorCodes.UTS_MethodNotAllowed, "Method '%1$s' is not supported for mapping: '%2s'", method, mapping);
     }
 
     public MethodNotAllowed(String method, String mapping, Throwable t) {
-        super(SystemErrorCodes.MethodNotAllowed, "Method '%1$s' is not supported for mapping: '%2s'", t, method, mapping);
+        super(SystemErrorCodes.UTS_MethodNotAllowed, "Method '%1$s' is not supported for mapping: '%2s'", t, method, mapping);
     }
 }

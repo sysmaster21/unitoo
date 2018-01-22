@@ -5,6 +5,7 @@
  */
 package org.master.unitoo.core.api;
 
+import org.master.unitoo.core.errors.StorageAccessException;
 import org.master.unitoo.core.errors.StorageCreateException;
 import org.master.unitoo.core.errors.StorageFlushException;
 import org.master.unitoo.core.errors.StorageLoadException;
@@ -22,13 +23,13 @@ public interface IExternalStorage<T, P> {
 
     void load() throws StorageLoadException;
 
-    Iterable<String> keys();
+    Iterable<String> keys() throws StorageAccessException;
 
-    boolean hasValue(String name, P parent, Class type);
+    boolean hasValue(String name, P parent, Class type) throws StorageAccessException;
 
-    Object getValue(String name, P parent, Class type);
+    Object getValue(String name, P parent, Class type) throws StorageAccessException;
 
-    void putValue(String name, Object value, P parent, Class type);
+    void putValue(String name, Object value, P parent, Class type) throws StorageAccessException;
 
     void flush() throws StorageFlushException;
 

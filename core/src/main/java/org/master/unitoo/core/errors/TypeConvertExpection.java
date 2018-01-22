@@ -12,10 +12,10 @@ package org.master.unitoo.core.errors;
 public class TypeConvertExpection extends UnitooException {
 
     public TypeConvertExpection(Object value, Class clazz) {
-        super(SystemErrorCodes.TypeConvertExpection, "Can't convert value '%1$s' to '%2$s'", value.toString(), clazz.getName());
+        super(SystemErrorCodes.UTS_TypeConvertExpection, "Can't convert value '%1$s' to '%2$s'", value.toString(), clazz.getName());
     }
 
     public TypeConvertExpection(Object value, Class clazz, Throwable t) {
-        super(SystemErrorCodes.TypeConvertExpection, "Can't convert value '%1$s' to '%2$s'", t, value.toString(), clazz.getName());
+        super(SystemErrorCodes.UTS_TypeConvertExpection, "Can't convert value '%1$s' to '%2$s'", t, value.toString(), clazz.getName());
     }
 }

@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class InvalidContentType extends UnitooException {
 
     public InvalidContentType(String mime) {
-        super(SystemErrorCodes.InvalidContentType, "Invalid content type: '%1$s'", mime);
+        super(SystemErrorCodes.UTS_InvalidContentType, "Invalid content type: '%1$s'", mime);
     }
 }

@@ -9,9 +9,9 @@ package org.master.unitoo.core.errors;
  *
  * @author Andrey
  */
-public class StorageFlushException extends UnitooException {
+public class StorageAccessException extends UnitooException {
 
-    public StorageFlushException(String name, Throwable t) {
-        super(SystemErrorCodes.UTS_StorageFlushException, "Storage '%1$s' saving failed", t, name);
+    public StorageAccessException(String name, Throwable t) {
+        super(SystemErrorCodes.UTS_StorageAccessException, "Storage '%1$s' access failed", t, name);
     }
 }

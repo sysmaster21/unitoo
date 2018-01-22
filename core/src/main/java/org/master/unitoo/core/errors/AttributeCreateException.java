@@ -12,10 +12,10 @@ package org.master.unitoo.core.errors;
 public class AttributeCreateException extends UnitooException {
 
     public AttributeCreateException(String name) {
-        super(SystemErrorCodes.AttributeCreateException, "Attribute %1$s failed to create", name);
+        super(SystemErrorCodes.UTS_AttributeCreateException, "Attribute %1$s failed to create", name);
     }
 
     public AttributeCreateException(String name, Throwable t) {
-        super(SystemErrorCodes.AttributeCreateException, t, "Attribute %1$s failed to create", name);
+        super(SystemErrorCodes.UTS_AttributeCreateException, t, "Attribute %1$s failed to create", name);
     }
 }

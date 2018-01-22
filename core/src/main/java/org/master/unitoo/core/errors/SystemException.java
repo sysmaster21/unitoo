@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class SystemException extends UnitooException {
 
     public SystemException(Throwable t) {
-        super(SystemErrorCodes.SystemException, "System error", t);
+        super(SystemErrorCodes.UTS_SystemException, "System error", t);
     }
 }

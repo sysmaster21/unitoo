@@ -7,7 +7,6 @@ package org.master.unitoo.core.impl;
 
 import java.util.concurrent.ConcurrentHashMap;
 import org.master.unitoo.core.api.IExternalStorage;
-import org.master.unitoo.core.api.annotation.Component;
 import org.master.unitoo.core.server.FileCheckTask;
 import org.master.unitoo.core.base.BaseExternalValueManager;
 
@@ -17,7 +16,7 @@ import org.master.unitoo.core.base.BaseExternalValueManager;
  * @param <T> класс источника
  * @param <P> класс родителького эелемента
  */
-public abstract class PropertiesExternalValuesManager<T, P> extends BaseExternalValueManager<T, P> {
+public abstract class DatabaseExternalValuesManager<T, P> extends BaseExternalValueManager<T, P> {
 
     private final ConcurrentHashMap<T, PropertiesStorage> storages = new ConcurrentHashMap<>();
 
@@ -29,8 +28,6 @@ public abstract class PropertiesExternalValuesManager<T, P> extends BaseExternal
         storages.put(source, storage);
         return storage;
     }
-
-    public abstract Object getItemCode(P item);
 
     @Override
     public void bootComplete() {
