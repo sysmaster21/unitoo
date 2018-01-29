@@ -3,20 +3,16 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.master.unitoo.core.api;
-
-import org.master.unitoo.core.types.MethodType;
+package org.master.unitoo.core.types;
 
 /**
  *
  * @author Andrey
  */
-public interface IMethodInformation {
+public enum BinaryFormat {
 
-    String name();
-
-    MethodType type();
-
-    String info();
+    RAW,
+    HEX,
+    BASE64;
 
 }

@@ -6,27 +6,37 @@
 package org.master.unitoo.core.impl;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.servlet.http.Cookie;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.master.unitoo.core.UniToo;
 import org.master.unitoo.core.api.IApplication;
 import org.master.unitoo.core.api.IBootInfo;
-import org.master.unitoo.core.api.IFormatContext;
+import org.master.unitoo.core.api.IBusinessObject;
 import org.master.unitoo.core.api.ILogger;
+import org.master.unitoo.core.api.IProcessSnapshot;
+import org.master.unitoo.core.api.IResponse;
 import org.master.unitoo.core.api.annotation.Request;
 import org.master.unitoo.core.api.components.IFormatter;
 import org.master.unitoo.core.api.components.ext.IHTTPService;
@@ -36,13 +46,14 @@ import org.master.unitoo.core.errors.MethodNotFound;
 import org.master.unitoo.core.server.LogCache;
 import org.master.unitoo.core.types.ComponentContext;
 import org.master.unitoo.core.types.ComponentType;
-import org.master.unitoo.core.types.MIME;
 import org.master.unitoo.core.types.RequestMethod;
 import org.master.unitoo.core.types.RequestParamMode;
 import org.master.unitoo.core.types.RunnableState;
 import org.master.unitoo.core.server.Setting;
 import org.master.unitoo.core.api.annotation.Attribute;
 import org.master.unitoo.core.api.annotation.Response;
+import org.master.unitoo.core.types.Decision;
+import org.master.unitoo.core.api.IDataContent;
 
 /**
  *
@@ -81,13 +92,13 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
         }
     }
 
-    private void addQueryParam(StringBuilder buf, RequestParameter param, Object value, IFormatter formatter, String start) {
+    private void addQueryParam(StringBuilder buf, ExternalMethod method, RequestParameter param, Object value, String start) throws IOException {
         if (value != null) {
             String strvalue;
             try {
-                strvalue = URLEncoder.encode(formatter.format(value, param.getFormatContext()), formatter.encoding().name());
+                strvalue = URLEncoder.encode(serializeParam(method, param, value), param.formats().format(method.paramsFormatter()).encoding());
             } catch (UnsupportedEncodingException e) {
-                strvalue = formatter.format(value);
+                strvalue = param.formats().format(method.paramsFormatter()).format(value);
             }
 
             if (buf.length() == 0) {
@@ -98,48 +109,94 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
         }
     }
 
+    private String serializeParam(IFormatter formatter, IDataContent content, Object value) throws IOException {
+        if (value instanceof IBusinessObject) {
+            ByteArrayOutputStream buf = new ByteArrayOutputStream();
+            content.serialize(
+                    (IBusinessObject) value,
+                    buf,
+                    formatter);
+            return new String(buf.toByteArray(), formatter.encoding());
+        } else {
+            return formatter.format(value);
+        }
+    }
+
+    private String serializeParam(ExternalMethod method, RequestParameter param, Object value) throws IOException {
+        if (value != null) {
+            if (value instanceof IBusinessObject) {
+                IFormatter formatter = param.formats().format(method.paramsFormatter());
+                ByteArrayOutputStream buf = new ByteArrayOutputStream();
+                param.formats().content(method.paramsContent()).serialize(
+                        (IBusinessObject) value,
+                        buf,
+                        formatter);
+                return new String(buf.toByteArray(), formatter.encoding());
+            } else {
+                return param.formats().format(method.paramsFormatter()).format(value);
+            }
+        } else {
+            return null;
+        }
+    }
+
     @Override
     @SuppressWarnings("UseSpecificCatch")
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         LogCache log = new LogCache(log());
         log.info(">>>");
+        IProcessSnapshot snapshot = app().process().context().save();
         try {
             String fullName = context.componentClass().getName() + "." + method.getName() + "()";
             log.debug("Calling external method: " + fullName);
-            ExternalMethod em = methods.get(method);
-            if (em == null) {
+            ExternalMethod eMethod = methods.get(method);
+            if (eMethod == null) {
                 throw new MethodNotFound(fullName);
             }
 
-            IFormatter paramFormatter = em.paramFormatter();
-            log.debug("Using param formatter: " + paramFormatter.getClass());
+            IFormatter bodyFormatter = null;
+            IDataContent bodyContent = null;
             Object bodyObject = null;
             RequestParameter bodyParam = null;
 
             ArrayList<HttpCookie> cookies = new ArrayList<>();
             StringBuilder strbuf = new StringBuilder();
-            RequestParameter[] params = em.params().params();
+            RequestParameter[] params = eMethod.paramList.params();
             for (int i = 0; i < params.length; i++) {
-                RequestParameter param = params[i];
-                if (param.mode() == RequestParamMode.Param && args[i] != null) {
-                    addQueryParam(strbuf, param, args[i], paramFormatter, "?");
-                } else if (param.mode() == RequestParamMode.Cookie) {
-                    String val = paramFormatter.format(args[i], param.getFormatContext());
-                    HttpCookie cookie = new HttpCookie(param.name(), val);
-                    cookies.add(cookie);
-                } else if (param.mode() == RequestParamMode.Body) {
-                    bodyObject = args[i];
-                    bodyParam = param;
+                if (args[i] != null) {
+                    RequestParameter param = params[i];
+                    app().process().context()
+                            .escape(param.formats().escape())
+                            .trim(param.formats().trim());
+                    switch (param.mode()) {
+                        case Param:
+                            if ((param.forMethod() == RequestMethod.DEFAULT && eMethod.type == RequestMethod.GET) || param.forMethod() == RequestMethod.GET) {
+                                addQueryParam(strbuf, eMethod, param, args[i], "?");
+                            }
+                            break;
+                        case Cookie:
+                            HttpCookie cookie = new HttpCookie(param.name(), serializeParam(eMethod, param, args[i]));
+                            cookies.add(cookie);
+                            break;
+                        case Body:
+                            bodyObject = args[i];
+                            bodyParam = param;
+                            bodyContent = param.formats().content(eMethod.paramsContent());
+                            bodyFormatter = param.formats().format(eMethod.paramsFormatter());
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
 
-            String query = url() + "/" + em.getName() + strbuf.toString();
+            String query = url() + "/" + eMethod.name + strbuf.toString();
             log.info("Calling query: " + query);
             HttpURLConnection conn = (HttpURLConnection) new URL(query).openConnection();
             conn.setUseCaches(false);
-            conn.setDoOutput(em.hasOutput());
-            conn.setDoInput(em.hasInput());
-            conn.setRequestMethod(em.getType().name());
+            conn.setDoOutput(eMethod.type == RequestMethod.POST);
+            conn.setDoInput(eMethod.input);
+            conn.setRequestMethod(eMethod.type.name());
 
             strbuf.setLength(0);
             boolean first = true;
@@ -156,23 +213,23 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
             for (int i = 0; i < params.length; i++) {
                 RequestParameter param = params[i];
                 if (param.mode() == RequestParamMode.Header && args[i] != null) {
-                    String val = paramFormatter.format(args[i], param.getFormatContext());
+                    String val = serializeParam(eMethod, param, args[i]);
                     conn.setRequestProperty(param.name(), val);
                     log.debug("Setting header: " + param.name() + " = " + val);
                 }
             }
 
-            if (em.hasOutput()) {
+            if (eMethod.type == RequestMethod.POST) {
 
                 HttpEntity multipart = null;
 
-                if (MIME.MULTIPART_FORM_DATA.equals(em.contentType())) {
+                if (ContentType.MULTIPART_FORM_DATA.getMimeType().equals(eMethod.paramsContent().contentType("UTF-8").getMimeType())) {
                     log.debug("Multipart params:");
                     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
 
                     for (int i = 0; i < params.length; i++) {
                         RequestParameter param = params[i];
-                        if (param.mode() == RequestParamMode.Post && args[i] != null) {
+                        if ((param.forMethod() == RequestMethod.DEFAULT || param.mode() == RequestParamMode.Post) && args[i] != null) {
 
                             if (args[i] instanceof RequestFile) {
                                 RequestFile file = (RequestFile) args[i];
@@ -180,15 +237,11 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
                                 builder.addBinaryBody(
                                         param.name(),
                                         file.stream(),
-                                        MIME.ToContentType(file.mime()),
+                                        file.encoding() == null ? ContentType.create(file.mime()) : ContentType.create(file.mime(), file.encoding()),
                                         file.name());
                             } else {
-                                ContentType type;
-                                if (param.mime() != null && !param.mime().isEmpty()) {
-                                    type = MIME.ToContentType(param.mime());
-                                } else {
-                                    type = MIME.ByClass(param.type(), ContentType.TEXT_PLAIN);
-                                }
+                                IDataContent content = param.formats().content(eMethod.paramsContent());
+                                ContentType type = content.contentType(param.formats().format(eMethod.paramsFormatter()).encoding());
 
                                 if (args[i] instanceof byte[]) {
                                     log.debug("\t" + param.name() + " = binary: " + ((byte[]) args[i]).length + " bytes; type: " + type.getMimeType());
@@ -205,8 +258,8 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
                                             type,
                                             "");
                                 } else {
-                                    String value = paramFormatter.format(args[i], param.getFormatContext());
-                                    log.debug("\t" + param.name() + " = type: " + type.getMimeType() + "; value = " + value);
+                                    String value = serializeParam(eMethod, param, args[i]);
+                                    log.debug("\t" + param.name() + " = type: " + type + "; value = " + value);
                                     builder.addTextBody(param.name(), value, type);
                                 }
                             }
@@ -215,18 +268,18 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
                     multipart = builder.build();
                 }
 
-                String contentType;
-                if (MIME.WithCharset(em.contentType())) {
-                    contentType = em.contentType() + "; charset=" + paramFormatter.encoding().name();
+                String requestType;
+                if (bodyContent != null && bodyFormatter != null) {
+                    requestType = bodyContent.contentType(bodyFormatter.encoding()).toString();
                 } else if (multipart != null) {
-                    contentType = multipart.getContentType().getValue();
+                    requestType = multipart.getContentType().getValue();
                 } else {
-                    contentType = em.contentType();
+                    requestType = eMethod.paramsContent().contentType(eMethod.paramsFormatter().encoding()).toString();
                 }
-                conn.setRequestProperty("Content-Type", contentType);
-                log.debug("Request content type: " + contentType);
+                conn.setRequestProperty("Content-Type", requestType);
+                log.debug("Request content type: " + requestType);
                 try (OutputStream out = conn.getOutputStream()) {
-                    if (bodyObject != null && bodyParam != null) {
+                    if (bodyObject != null && bodyParam != null && bodyContent != null && bodyFormatter != null) {
                         if (bodyObject instanceof byte[]) {
                             log.debug("Body content: bytes, length " + ((byte[]) bodyObject).length);
                             out.write((byte[]) bodyObject);
@@ -234,23 +287,23 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
                             log.debug("Body content: stream");
                             UniToo.Copy((InputStream) bodyObject, out);
                         } else {
-                            String val = paramFormatter.format(bodyObject, bodyParam.getFormatContext());
+                            String val = serializeParam(bodyFormatter, bodyContent, bodyObject);
                             log.debug("Body content:\n" + val);
-                            out.write(val.getBytes(paramFormatter.encoding()));
+                            out.write(val.getBytes(bodyFormatter.encoding()));
                         }
                     }
 
-                    if (MIME.X_WWW_FORM_URLENCODED.equals(em.contentType)) {
+                    if (ContentType.APPLICATION_FORM_URLENCODED.getMimeType().equals(eMethod.paramsContent().contentType("UTF-8").getMimeType())) {
                         strbuf.setLength(0);
                         for (int i = 0; i < params.length; i++) {
                             RequestParameter param = params[i];
-                            if (param.mode() == RequestParamMode.Post && args[i] != null) {
-                                addQueryParam(strbuf, param, args[i], paramFormatter, "");
+                            if ((param.forMethod() == RequestMethod.DEFAULT || param.mode() == RequestParamMode.Post) && args[i] != null) {
+                                addQueryParam(strbuf, eMethod, param, args[i], "");
                             }
                         }
                         String val = strbuf.toString();
                         log.debug("Post encoded params:\n" + val);
-                        out.write(val.getBytes(paramFormatter.encoding()));
+                        out.write(val.getBytes(eMethod.paramsFormatter().encoding()));
                     } else if (multipart != null) {
                         multipart.writeTo(out);
                     }
@@ -263,7 +316,7 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
 
             int rc = conn.getResponseCode();
             log.info("Response code: " + rc);
-            IFormatter resultFormatter = em.resultFormatter();
+            IFormatter resultFormatter = eMethod.resultFormatter();
             if (rc != 200) {
                 HttpResponseError error = new HttpResponseError(rc);
                 String text = null;
@@ -278,25 +331,49 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
                 throw error;
             }
 
-            if (em.hasInput()) {
-                if (InputStream.class == em.outputType()) {
+            if (eMethod.input) {
+                app().process().context().escape(eMethod.resultEscape).trim(eMethod.resultTrim);
+
+                if (log.getDebugState()) {
+                    log.debug("Response headers:");
+                    StringBuilder headerBuf = new StringBuilder();
+                    Map<String, List<String>> map = conn.getHeaderFields();
+                    for (Map.Entry<String, List<String>> entry : map.entrySet()) {
+                        List<String> list = entry.getValue();
+                        headerBuf.setLength(0);
+                        headerBuf.append("\t");
+                        if (entry.getKey() != null) {
+                            headerBuf.append(entry.getKey()).append(" = ");
+                        }
+                        if (list.size() == 1) {
+                            headerBuf.append(list.get(0));
+                        } else {
+                            for (String s : list) {
+                                headerBuf.append(s).append("; ");
+                            }
+                        }
+
+                        log.debug(headerBuf.toString());
+                    }
+                }
+
+                IDataContent resultContent = eMethod.resultContent(conn.getContentType());
+                if (InputStream.class == eMethod.outputType) {
                     log.debug("Response data: stream");
                     return new BufferedInputStream(conn.getInputStream());
+                } else if (IResponse.class == eMethod.outputType) {
+                    HttpResponse result = new HttpResponse(conn);
+                    if (eMethod.outputGeneric == InputStream.class) {
+                        result.body(conn.getInputStream());
+                    } else {
+                        try (InputStream input = conn.getInputStream()) {
+                            result.body(makeResult(log, input, eMethod.outputGeneric, resultFormatter, resultContent));
+                        }
+                    }
+                    return result;
                 } else {
                     try (InputStream input = conn.getInputStream()) {
-
-                        ByteArrayOutputStream buf = new ByteArrayOutputStream();
-                        UniToo.Copy(input, buf);
-                        byte[] data = buf.toByteArray();
-
-                        if (byte[].class == em.outputType) {
-                            log.debug("Response data: bytes, length: " + data.length);
-                            return data;
-                        } else {
-                            String str = new String(data, resultFormatter.encoding());
-                            log.debug("Response data:\n" + str);
-                            return resultFormatter.parse(str, em.outputType(), em.getFormatContext());
-                        }
+                        return makeResult(log, input, eMethod.outputType, resultFormatter, resultContent);
                     }
                 }
             } else {
@@ -308,8 +385,35 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
             }
             return null;
         } finally {
+            app().process().context().restore(snapshot);
             log.info("<<<\n");
             log.flush();
+        }
+    }
+
+    private Object makeResult(ILogger log, InputStream stream, Class type, IFormatter format, IDataContent content) throws IOException {
+        if (IBusinessObject.class.isAssignableFrom(type)) {
+            InputStream input;
+            if (log.getDebugState()) {
+                ByteArrayOutputStream buf = new ByteArrayOutputStream();
+                UniToo.Copy(stream, buf);
+                log.debug("Response object:\n" + new String(buf.toByteArray(), "UTF-8"));
+                input = new ByteArrayInputStream(buf.toByteArray());
+            } else {
+                input = stream;
+            }
+            return content.deserialize(type, input, format);
+        } else {
+            ByteArrayOutputStream buf = new ByteArrayOutputStream();
+            UniToo.Copy(stream, buf);
+            byte[] data = buf.toByteArray();
+            if (byte[].class == type) {
+                log.debug("Response data: bytes, length: " + data.length);
+                return data;
+            } else {
+                String str = new String(data, format.encoding());
+                return format.parse(str, type);
+            }
         }
     }
 
@@ -415,15 +519,19 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
         private final String name;
         private final RequestMethod type;
         private final Class<? extends IFormatter> paramsFormatterClass;
+        private IFormatter paramsFormatter;
         private final Class<? extends IFormatter> resultFormatterClass;
         private IFormatter resultFormatter;
-        private IFormatter paramFormatter;
-        private final RequestParametersList params;
+        private final Class<? extends IDataContent> paramsContentClass;
+        private IDataContent paramsContent;
+        private final Class<? extends IDataContent>[] resultContentClass;
+        private ConcurrentHashMap<String, IDataContent> resultContents;
+        private final RequestParametersList paramList;
         private final Class outputType;
-        private final String contentType;
-        private final boolean output;
+        private final Class outputGeneric;
         private final boolean input;
-        private final IFormatContext resultContext;
+        private final boolean resultEscape;
+        private final boolean resultTrim;
 
         public ExternalMethod(
                 ExternalHTTPService parent,
@@ -437,39 +545,36 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
             this.type = rqMapping.type().length == 0 ? RequestMethod.GET : rqMapping.type()[0];
             this.paramsFormatterClass = rqMapping.format();
             this.resultFormatterClass = rsMapping == null ? IFormatter.class : rsMapping.format();
+            this.paramsContentClass = rqMapping.content();
+            this.resultContentClass = rsMapping == null
+                    ? null
+                    : rsMapping.content();
             this.outputType = method.getReturnType();
             this.input = Void.class != method.getReturnType() && void.class != method.getReturnType();
+            Type t = method.getGenericReturnType();
+            if (t instanceof ParameterizedType) {
+                outputGeneric = (Class) ((ParameterizedType) t).getActualTypeArguments()[0];
+            } else {
+                outputGeneric = String.class;
+            }
 
-            boolean es = UniToo.getEffectiveDecision(parent.app().defaults().isEscapeExternalParams(), rqMapping.escape());
-            boolean tr = UniToo.getEffectiveDecision(parent.app().defaults().isTrimExternalParams(), rqMapping.trim());
-            this.params = new RequestParametersList(parent.app(), method, false, es, tr);
-            this.contentType = rqMapping.mime().isEmpty() ? params.contentType() : rqMapping.mime();
-            this.output = params.isPost();
+            resultEscape = Decision.Get(parent.app().defaults().isEscapeExternalParams(), rqMapping.escape());
+            resultTrim = Decision.Get(parent.app().defaults().isTrimExternalParams(), rqMapping.trim());
 
-            final boolean resultEscape = UniToo.getEffectiveDecision(parent.app().defaults().isEscapeExternalParams(), rqMapping.escape());
-            final boolean resultTrim = UniToo.getEffectiveDecision(parent.app().defaults().isTrimExternalParams(), rqMapping.trim());
-            this.resultContext = new IFormatContext() {
-                @Override
-                public boolean escape() {
-                    return resultEscape;
-                }
-
-                @Override
-                public boolean trim() {
-                    return resultTrim;
-                }
-            };
+            boolean es = Decision.Get(parent.app().defaults().isEscapeExternalParams(), rqMapping.escape());
+            boolean tr = Decision.Get(parent.app().defaults().isTrimExternalParams(), rqMapping.trim());
+            this.paramList = new RequestParametersList(parent.app(), method, es, tr);
         }
 
-        public IFormatter paramFormatter() {
-            if (paramFormatter == null) {
+        public IFormatter paramsFormatter() {
+            if (paramsFormatter == null) {
                 if (paramsFormatterClass == IFormatter.class) {
                     return parent.app().defaults().formatter();
                 } else {
-                    paramFormatter = parent.app().component(paramsFormatterClass);
+                    paramsFormatter = parent.app().component(paramsFormatterClass);
                 }
             }
-            return paramFormatter;
+            return paramsFormatter;
         }
 
         public IFormatter resultFormatter() {
@@ -483,36 +588,81 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
             return resultFormatter;
         }
 
-        public RequestParametersList params() {
-            return params;
+        public IDataContent paramsContent() {
+            if (paramsContent == null) {
+                if (paramsContentClass == IDataContent.class) {
+                    paramsContent = parent.app().defaults().content(null);
+                } else {
+                    paramsContent = parent.app().component(paramsContentClass);
+                }
+            }
+            return paramsContent;
         }
 
-        public String getName() {
-            return name;
+        public IDataContent resultContent(String contentType) {
+            String mime = ContentType.parse(contentType).getMimeType();
+
+            if (resultContentClass == null) {
+                return parent.app().defaults().content(mime);
+            }
+
+            if (resultContents == null) {
+                resultContents = new ConcurrentHashMap<>();
+
+                for (Class<? extends IDataContent> clazz : resultContentClass) {
+                    IDataContent content = clazz == IDataContent.class
+                            ? parent.app().defaults().content(mime)
+                            : parent.app().component(clazz);
+                    resultContents.put(content.contentType("UTF-8").getMimeType(), content);
+                }
+            }
+
+            IDataContent content = resultContents.get(mime);
+            return content == null ? parent.app().defaults().content(mime) : content;
+        }
+    }
+
+    private class HttpResponse implements IResponse<Object> {
+
+        private final HttpURLConnection connection;
+        private Object body;
+
+        public HttpResponse(HttpURLConnection connection) {
+            this.connection = connection;
         }
 
-        public RequestMethod getType() {
-            return type;
+        @Override
+        public String getHeaderValue(String name) {
+            return connection.getHeaderField(name);
         }
 
-        public Class outputType() {
-            return outputType;
+        @Override
+        public List<String> getHeaderValues(String name) {
+            return connection.getHeaderFields().get(name);
         }
 
-        public String contentType() {
-            return contentType;
+        @Override
+        public Map<String, List<String>> getHeaders() {
+            return connection.getHeaderFields();
         }
 
-        public boolean hasOutput() {
-            return output;
+        @Override
+        public Iterable<Cookie> cookies() {
+            return Collections.EMPTY_LIST;
         }
 
-        public boolean hasInput() {
-            return input;
+        @Override
+        public Object body() {
+            return body;
         }
 
-        public IFormatContext getFormatContext() {
-            return resultContext;
+        public void body(Object body) {
+            this.body = body;
+        }
+
+        @Override
+        public IDataContent content() {
+            return null;
         }
 
     }

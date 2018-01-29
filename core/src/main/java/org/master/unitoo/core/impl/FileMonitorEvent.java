@@ -7,7 +7,7 @@ package org.master.unitoo.core.impl;
 
 import org.master.unitoo.core.api.util.IMonitorEvent;
 import org.master.unitoo.core.types.CRUD;
-import org.master.unitoo.core.types.DateTime;
+import org.master.unitoo.core.api.synthetic.DateTime;
 
 /**
  *

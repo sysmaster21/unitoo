@@ -17,12 +17,14 @@ public class BytesRequestFile extends RequestFile {
 
     private final byte[] file;
     private final String mime;
+    private final String encoding;
     private final String name;
 
-    public BytesRequestFile(byte[] file, String mime, String name) {
+    public BytesRequestFile(byte[] file, String name, String mime, String encoding) {
         this.file = file;
-        this.mime = mime;
         this.name = name;
+        this.mime = mime;
+        this.encoding = encoding;
     }
 
     @Override
@@ -33,6 +35,11 @@ public class BytesRequestFile extends RequestFile {
     @Override
     public String name() {
         return name;
+    }
+
+    @Override
+    public String encoding() {
+        return encoding;
     }
 
     @Override

@@ -5,17 +5,17 @@
  */
 package org.master.unitoo.core.api.components;
 
-import com.google.gson.Gson;
-import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.text.NumberFormat;
-import javax.xml.transform.Transformer;
 import org.master.unitoo.core.api.IAutowired;
 import org.master.unitoo.core.api.IComponent;
-import org.master.unitoo.core.api.IFormatContext;
 import org.master.unitoo.core.errors.TypeConvertExpection;
-import org.master.unitoo.core.errors.XMLTranformException;
+import org.master.unitoo.core.errors.XMLException;
 import org.master.unitoo.core.server.Setting;
+import org.master.unitoo.core.types.BinaryFormat;
+import org.master.unitoo.core.utils.JSONFormat;
+import org.master.unitoo.core.utils.XMLFormat;
+import org.master.unitoo.core.api.IDataContent;
 
 /**
  *
@@ -33,22 +33,20 @@ public interface IFormatter extends IComponent, IAutowired {
 
     NumberFormat integer();
 
-    Transformer xml() throws XMLTranformException;
+    BinaryFormat binary();
+
+    XMLFormat xml() throws XMLException;
 
     String list();
 
     String format(Object obj);
 
-    String format(Object obj, IFormatContext context);
-
     <T> T parse(String value, Class<T> clazz) throws TypeConvertExpection;
 
-    <T> T parse(String value, Class<T> clazz, IFormatContext context) throws TypeConvertExpection;
+    JSONFormat json();
 
-    Gson gson();
+    String encoding();
 
-    Charset encoding();
-    
     Setting[] settings();
 
 }

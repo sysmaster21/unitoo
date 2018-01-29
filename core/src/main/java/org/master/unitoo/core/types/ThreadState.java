@@ -3,12 +3,19 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.master.unitoo.core.api.synthetic;
+package org.master.unitoo.core.types;
 
 /**
  *
  * @author Andrey
  */
-public interface IJsonObject {
+public enum ThreadState {
+
+    Idle,
+    Reading,
+    Processing,
+    Waiting,
+    Database,
+    Writing;
 
 }

@@ -31,15 +31,19 @@ public class ServerConfig extends ConcurrentHashMap<String, Setting> implements 
         this.app = application;
     }
 
-    public void register(Setting setting, String name, Object value, Class clazz, IComponent component) {
-        setting.init(name, value, clazz, component, this);
-        put(name, setting);
+    public <T> void register(Setting<T> setting, String name, T value, Class<T> clazz, IComponent component) {
+        if (setting != null) {
+            setting.init(name, value, clazz, component, this);
+            put(name, setting);
+        }
     }
 
-    public void reinit(Setting setting, Object value) {
-        Setting check = get(setting.name());
-        if (check == setting) {
-            setting.reinit(value);
+    public <T> void reinit(Setting<T> setting, T value) {
+        if (setting != null) {
+            Setting check = get(setting.name());
+            if (check == setting) {
+                setting.reinit(value);
+            }
         }
     }
 
@@ -67,6 +71,7 @@ public class ServerConfig extends ConcurrentHashMap<String, Setting> implements 
         }
     }
 
+    @SuppressWarnings("unchecked")
     public void reload(boolean first) throws UnitooException {
         barrier.lock();
         try {

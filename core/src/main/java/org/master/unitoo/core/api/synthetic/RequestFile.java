@@ -15,6 +15,8 @@ import java.io.InputStream;
 public abstract class RequestFile {
 
     public abstract String mime();
+  
+    public abstract String encoding();
 
     public abstract String name();
 

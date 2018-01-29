@@ -10,6 +10,7 @@ package org.master.unitoo.core.types;
  * @author Andrey
  */
 public enum RequestMethod {
+    DEFAULT,
     GET,
     HEAD,
     POST,

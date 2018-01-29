@@ -3,16 +3,15 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.master.unitoo.core.api;
+package org.master.unitoo.core.errors;
 
 /**
  *
  * @author Andrey
  */
-public interface IFormatContext {
+public class XMLException extends UnitooException {
 
-    boolean escape();
-
-    boolean trim();
-
+    public XMLException(Throwable t) {
+        super(SystemErrorCodes.UTS_XMLException, "XML processing failed", t);
+    }
 }

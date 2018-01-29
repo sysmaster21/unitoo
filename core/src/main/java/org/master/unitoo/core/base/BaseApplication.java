@@ -5,9 +5,11 @@
  */
 package org.master.unitoo.core.base;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -30,6 +32,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.EnumMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,6 +69,7 @@ import org.master.sqlonfly.impl.SqlDefaultDataTable;
 import org.master.sqlonfly.impl.SqlDefaultDirectTable;
 import org.master.sqlonfly.interfaces.IConnectionProvider;
 import org.master.sqlonfly.interfaces.ISQLBatch;
+import org.master.sqlonfly.interfaces.ISQLData;
 import org.master.sqlonfly.interfaces.ISQLDataParams;
 import org.master.sqlonfly.interfaces.ISQLDataRow;
 import org.master.sqlonfly.interfaces.ISQLDataTable;
@@ -76,17 +80,16 @@ import org.master.unitoo.core.api.IApplicationDefaults;
 import org.master.unitoo.core.api.IAutowired;
 import org.master.unitoo.core.api.IBootInfo;
 import org.master.unitoo.core.api.IBootListener;
+import org.master.unitoo.core.api.IBusinessField;
+import org.master.unitoo.core.api.IBusinessObject;
 import org.master.unitoo.core.api.ICodedEnum;
 import org.master.unitoo.core.api.IComponent;
 import org.master.unitoo.core.api.IControllerMethod;
 import org.master.unitoo.core.api.ICustomizedComponent;
 import org.master.unitoo.core.api.IExternalValuesManager;
-import org.master.unitoo.core.api.IFormatContext;
 import org.master.unitoo.core.api.IInterfacedComponent;
-import org.master.unitoo.core.api.synthetic.IJsonObject;
 import org.master.unitoo.core.api.components.IFormatter;
 import org.master.unitoo.core.api.ILogger;
-import org.master.unitoo.core.api.IMethodInformation;
 import org.master.unitoo.core.api.IRunnableComponent;
 import org.master.unitoo.core.api.util.ISession;
 import org.master.unitoo.core.api.IStoppableComponent;
@@ -97,7 +100,7 @@ import org.master.unitoo.core.api.components.IBackgroundTask;
 import org.master.unitoo.core.errors.FieldInitException;
 import org.master.unitoo.core.errors.SettingParseException;
 import org.master.unitoo.core.errors.TypeConvertExpection;
-import org.master.unitoo.core.errors.XMLTranformException;
+import org.master.unitoo.core.errors.XMLException;
 import org.master.unitoo.core.server.BootLog;
 import org.master.unitoo.core.server.LogCache;
 import org.master.unitoo.core.server.MainLog;
@@ -105,7 +108,7 @@ import org.master.unitoo.core.server.SysOutLogger;
 import org.master.unitoo.core.server.SystemFormatter;
 import org.master.unitoo.core.types.ComponentContext;
 import org.master.unitoo.core.types.ComponentType;
-import org.master.unitoo.core.types.DateTime;
+import org.master.unitoo.core.api.synthetic.DateTime;
 import org.master.unitoo.core.types.RunnableState;
 import org.master.unitoo.core.server.ServerConfig;
 import org.master.unitoo.core.types.ThreadType;
@@ -113,7 +116,6 @@ import org.master.unitoo.core.types.Time;
 import org.master.unitoo.core.utils.EnumUtils;
 import org.master.unitoo.settings.SysSettings;
 import org.w3c.dom.Document;
-import org.master.unitoo.core.api.IProcessContext;
 import org.master.unitoo.core.api.annotation.Attribute;
 import org.master.unitoo.core.api.annotation.GlobalParam;
 import org.master.unitoo.core.api.components.IConfigManager;
@@ -125,6 +127,7 @@ import org.master.unitoo.core.api.components.ILanguage;
 import org.master.unitoo.core.api.components.IStoredGlossary;
 import org.master.unitoo.core.api.util.IUser;
 import org.master.unitoo.core.errors.AccessDenied;
+import org.master.unitoo.core.errors.AttributeGetException;
 import org.master.unitoo.core.errors.ComponentLoadException;
 import org.master.unitoo.core.errors.InvalidSession;
 import org.master.unitoo.core.errors.MethodNotFound;
@@ -141,6 +144,17 @@ import org.master.unitoo.core.server.BootFormatter;
 import org.master.unitoo.core.types.MethodType;
 import org.master.unitoo.core.types.RequestMethod;
 import org.master.unitoo.core.server.Setting;
+import org.master.unitoo.core.types.BinaryFormat;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.master.unitoo.core.api.IProcess;
+import org.master.unitoo.core.api.IProcessContext;
+import org.master.unitoo.core.api.IProcessSnapshot;
+import org.master.unitoo.core.api.components.mappers.HTML_CONTENT;
+import org.master.unitoo.core.api.components.mappers.JSON_CONTENT;
+import org.master.unitoo.core.api.components.mappers.XML_CONTENT;
+import org.master.unitoo.core.types.Decision;
+import org.master.unitoo.core.types.ThreadState;
 
 /**
  *
@@ -167,18 +181,7 @@ public abstract class BaseApplication implements IApplication {
     private final WeakHashMap<Thread, ThreadInfo> threads = new WeakHashMap();
     private final ConcurrentMap<String, IControllerMethod> mappings = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, ILanguage> languages = new ConcurrentHashMap<>();
-    private final ThreadLocal<LinkedBlockingDeque<IFormatContext>> formatContext = new ThreadLocal<>();
-    private final IFormatContext emptyFormatContext = new IFormatContext() {
-        @Override
-        public boolean escape() {
-            return false;
-        }
-
-        @Override
-        public boolean trim() {
-            return false;
-        }
-    };
+    private final ConcurrentMap<String, BusinessFieldList> businessFields = new ConcurrentHashMap<>();
 
     protected abstract Class<? extends IGlossaryManager> glossaryManager();
 
@@ -191,28 +194,6 @@ public abstract class BaseApplication implements IApplication {
     @Override
     public IApplicationDefaults defaults() {
         return defaults;
-    }
-
-    IFormatContext currentFormatContext() {
-        LinkedBlockingDeque<IFormatContext> stack = formatContext.get();
-        IFormatContext context = stack == null ? null : stack.peek();
-        return context == null ? emptyFormatContext : context;
-    }
-
-    void enterFormatContext(IFormatContext context) {
-        LinkedBlockingDeque<IFormatContext> stack = formatContext.get();
-        if (stack == null) {
-            stack = new LinkedBlockingDeque<>();
-            formatContext.set(stack);
-        }
-        stack.push(context == null ? emptyFormatContext : context);
-    }
-
-    void exitFormatContext() {
-        LinkedBlockingDeque<IFormatContext> stack = formatContext.get();
-        if (stack != null) {
-            stack.pop();
-        }
     }
 
     @Override
@@ -315,6 +296,9 @@ public abstract class BaseApplication implements IApplication {
         defaults = new ApplicationDefaults(this);
         defaults.setFormatter(SystemFormatter.class);
         defaults.setErrorHandler(SystemErrorHandler.class);
+        defaults.addContent(HTML_CONTENT.class);
+        defaults.addContent(JSON_CONTENT.class);
+        defaults.addContent(XML_CONTENT.class);
         sysPack = component(SysSettings.class);
 
     }
@@ -408,12 +392,12 @@ public abstract class BaseApplication implements IApplication {
     }
 
     @Override
-    public IProcessContext process() {
+    public IProcess process() {
         return process(Thread.currentThread());
     }
 
     @Override
-    public IProcessContext process(Thread thread) {
+    public IProcess process(Thread thread) {
         ThreadInfo ti = threads.get(thread);
         if (ti == null) {
             ti = new ThreadInfo(thread.getName().contains("http") ? ThreadType.HTTP : ThreadType.System, this);
@@ -617,6 +601,21 @@ public abstract class BaseApplication implements IApplication {
             @Override
             public void debugQuery(String batchName, String string) {
                 log().debug(batchName + "\n" + string + "\n------------------------------------------------------------------\n\n");
+            }
+
+            @Override
+            public <T> T createObject(Class<T> clazz, ISQLData data) throws Exception {
+                T object = clazz.newInstance();
+                if (object instanceof IBusinessObject) {
+                    IBusinessObject bo = (IBusinessObject) object;
+                    for (IBusinessField field : businessFields(bo.getClass())) {
+                        if (data.exists(field.name())) {
+                            Object value = convert(data.getObject(field.name()), field.type());
+                            field.set(value, bo);
+                        }
+                    }
+                }
+                return object;
             }
         });
 
@@ -944,6 +943,28 @@ public abstract class BaseApplication implements IApplication {
         return sysPack.home.val();
     }
 
+    public byte[] strToByte(String value, BinaryFormat fmt) {
+        switch (fmt) {
+            case BASE64:
+                return new byte[0];
+            case HEX:
+                return new byte[0];
+            default:
+                return new byte[0];
+        }
+    }
+
+    private String byteToStr(InputStream stream, BinaryFormat fmt) {
+        switch (fmt) {
+            case BASE64:
+                return "Base64";
+            case HEX:
+                return "HEX";
+            default:
+                return "";
+        }
+    }
+
     @Override
     public String format(Object value) {
         return format(defaults.formatter(), value);
@@ -951,21 +972,23 @@ public abstract class BaseApplication implements IApplication {
 
     @Override
     public String format(IFormatter formatter, Object value) {
-        return format(formatter, value, null);
-    }
 
-    @Override
-    public String format(IFormatter formatter, Object value, IFormatContext context) {
         if (value == null) {
             return null;
         } else if (value instanceof String) {
-            if (context != null && context.escape()) {
+            if (process().context().escape()) {
                 value = org.apache.commons.text.StringEscapeUtils.escapeHtml4((String) value);
             }
-            if (context != null && context.trim()) {
+            if (process().context().trim()) {
                 value = ((String) value).trim();
             }
             return (String) value;
+
+        } else if (value instanceof InputStream) {
+            return byteToStr((InputStream) value, formatter.binary());
+
+        } else if (value instanceof byte[]) {
+            return byteToStr(new ByteArrayInputStream((byte[]) value), formatter.binary());
 
         } else if (value.getClass().isArray()) {
             StringBuilder buf = new StringBuilder();
@@ -976,12 +999,12 @@ public abstract class BaseApplication implements IApplication {
             return buf.toString();
         } else if (value instanceof Document) {
             try {
-                Transformer transformer = formatter.xml();
+                Transformer transformer = formatter.xml().transformer();
                 StringWriter writer = new StringWriter();
                 StreamResult result = new StreamResult(writer);
                 transformer.transform(new DOMSource((Document) value), result);
                 return writer.toString();
-            } catch (TransformerException | XMLTranformException e) {
+            } catch (TransformerException | XMLException e) {
                 log().error(e);
                 return null;
             }
@@ -993,14 +1016,6 @@ public abstract class BaseApplication implements IApplication {
 
         } else if (value instanceof Date) {
             return formatter.date().format((Date) value);
-
-        } else if (value instanceof IJsonObject) {
-            try {
-                enterFormatContext(context);
-                return formatter.gson().toJson(value);
-            } finally {
-                exitFormatContext();
-            }
 
         } else if (value instanceof ICodedEnum) {
             return format(formatter, ((ICodedEnum) value).code());
@@ -1016,12 +1031,16 @@ public abstract class BaseApplication implements IApplication {
             }
         } else if (long.class.isAssignableFrom(value.getClass())) {
             return formatter.integer().format(Long.valueOf((long) value));
+
         } else if (int.class.isAssignableFrom(value.getClass())) {
             return formatter.integer().format(Integer.valueOf((int) value));
+
         } else if (byte.class.isAssignableFrom(value.getClass())) {
             return formatter.integer().format(Byte.valueOf((byte) value));
+
         } else if (short.class.isAssignableFrom(value.getClass())) {
             return formatter.integer().format(Short.valueOf((short) value));
+
         } else {
             return value.toString();
         }
@@ -1033,16 +1052,17 @@ public abstract class BaseApplication implements IApplication {
     }
 
     @Override
-    public <T> T parse(IFormatter formatter, String value, Class<T> clazz) throws TypeConvertExpection {
-        return parse(formatter, value, clazz, null);
-    }
-
-    @Override
     @SuppressWarnings("UnnecessaryBoxing")
-    public <T> T parse(IFormatter formatter, String value, Class<T> clazz, IFormatContext context) throws TypeConvertExpection {
+    public <T> T parse(IFormatter formatter, String value, Class<T> clazz) throws TypeConvertExpection {
         try {
             if (value == null || value.isEmpty()) {
                 return null;
+
+            } else if (InputStream.class.isAssignableFrom(clazz)) {
+                return (T) new ByteArrayInputStream(strToByte(value, formatter.binary()));
+
+            } else if (byte[].class.isAssignableFrom(clazz)) {
+                return (T) strToByte(value, formatter.binary());
 
             } else if (clazz.isArray()) {
                 String[] items = value.split("\\" + formatter.list());
@@ -1060,10 +1080,10 @@ public abstract class BaseApplication implements IApplication {
                 return (T) array;
 
             } else if (String.class.isAssignableFrom(clazz)) {
-                if (context != null && context.escape()) {
+                if (process().context().escape()) {
                     value = org.apache.commons.text.StringEscapeUtils.escapeHtml4(value);
                 }
-                if (context != null && context.trim()) {
+                if (process().context().trim()) {
                     value = value.trim();
                 }
                 return (T) value;
@@ -1101,14 +1121,8 @@ public abstract class BaseApplication implements IApplication {
                 } else {
                     return (T) Double.valueOf(formatter.decimal().parse(value).doubleValue());
                 }
-
-            } else if (IJsonObject.class.isAssignableFrom(clazz)) {
-                try {
-                    enterFormatContext(context);
-                    return formatter.gson().fromJson(value, clazz);
-                } finally {
-                    exitFormatContext();
-                }
+            } else if (Document.class.isAssignableFrom(clazz)) {
+                return (T) formatter.xml().builder().parse(new InputSource(new StringReader(value)));
 
             } else if (ICodedEnum.class.isAssignableFrom(clazz)) {
                 T v = (T) EnumUtils.Get(
@@ -1129,7 +1143,7 @@ public abstract class BaseApplication implements IApplication {
             } else {
                 return (T) value;
             }
-        } catch (ParseException e) {
+        } catch (ParseException | SAXException | IOException e) {
             throw new TypeConvertExpection(value, clazz, e);
         }
     }
@@ -1367,6 +1381,130 @@ public abstract class BaseApplication implements IApplication {
         ((ThreadInfo) process()).session(null);
     }
 
+    @Override
+    public Iterable<IBusinessField> businessFields(Class<? extends IBusinessObject> type) {
+        BusinessFieldList list = businessFields.get(type.getName());
+        if (list == null) {
+            list = new BusinessFieldList(this);
+            list.scan(type);
+            businessFields.put(type.getName(), list);
+        }
+        return list;
+    }
+
+    private static class BusinessFieldList extends ArrayList<IBusinessField> {
+
+        private final IApplication app;
+
+        public BusinessFieldList(IApplication app) {
+            this.app = app;
+        }
+
+        public void scan(Class clazz) {
+            if (clazz.getSuperclass() != null) {
+                scan(clazz.getSuperclass());
+            }
+
+            for (Field field : clazz.getDeclaredFields()) {
+                if (!Modifier.isTransient(field.getModifiers())) {
+                    Attribute attr = field.getAnnotation(org.master.unitoo.core.api.annotation.Attribute.class);
+                    BusinessField bf = new BusinessField(
+                            field,
+                            attr != null && !attr.name().isEmpty() ? attr.name() : field.getName(),
+                            attr != null ? attr.trim() : Decision.Parent,
+                            attr != null ? attr.escape() : Decision.Parent,
+                            app);
+                    add(bf);
+                }
+            }
+        }
+    }
+
+    private static class BusinessField implements IBusinessField {
+
+        private final Field field;
+        private final String name;
+        private final IApplication app;
+        private final Class valueClass;
+        private final Class keyClass;
+        private final Decision trim;
+        private final Decision escape;
+
+        public BusinessField(Field field, String name, Decision trim, Decision escape, IApplication app) {
+            this.field = field;
+            this.name = name;
+            this.trim = trim;
+            this.escape = escape;
+            this.app = app;
+
+            Type t = field.getGenericType();
+            if (t instanceof ParameterizedType) {
+                if (Map.class.isAssignableFrom(field.getType())) {
+                    valueClass = (Class) ((ParameterizedType) t).getActualTypeArguments()[0];
+                    keyClass = (Class) ((ParameterizedType) t).getActualTypeArguments()[1];
+                } else {
+                    keyClass = null;
+                    valueClass = (Class) ((ParameterizedType) t).getActualTypeArguments()[0];
+                }
+            } else {
+                keyClass = null;
+                valueClass = null;
+            }
+
+            field.setAccessible(true);
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public Class type() {
+            return field.getType();
+        }
+
+        @Override
+        public Class itemType() {
+            return valueClass;
+        }
+
+        @Override
+        public Object get(IBusinessObject object) {
+            try {
+                return field.get(object);
+            } catch (IllegalAccessException | IllegalArgumentException e) {
+                app.log().error(new AttributeGetException(name, e));
+                return null;
+            }
+        }
+
+        @Override
+        public void set(Object value, IBusinessObject object) {
+            try {
+                field.set(object, value);
+            } catch (IllegalAccessException | IllegalArgumentException e) {
+                app.log().error(new AttributeGetException(name, e));
+            }
+        }
+
+        @Override
+        public Class keyType() {
+            return keyClass;
+        }
+
+        @Override
+        public Decision trim() {
+            return trim;
+        }
+
+        @Override
+        public Decision escape() {
+            return escape;
+        }
+
+    }
+
     private static class Timer implements Runnable {
 
         private volatile boolean active = true;
@@ -1445,16 +1583,18 @@ public abstract class BaseApplication implements IApplication {
         }
     }
 
-    protected static class ThreadInfo implements IProcessContext {
+    protected static class ThreadInfo implements IProcess {
 
         private ISession session;
+        private ThreadState state;
         private final IApplication app;
         private final ThreadType type;
-        private final LinkedBlockingDeque<IMethodInformation> stack = new LinkedBlockingDeque<>(1024);
+        private final LinkedBlockingDeque<IProcessContext> stack = new LinkedBlockingDeque<>(1024);
 
         public ThreadInfo(ThreadType type, IApplication app) {
             this.type = type;
             this.app = app;
+            this.state = ThreadState.Idle;
         }
 
         public void init(ISession session) {
@@ -1468,21 +1608,42 @@ public abstract class BaseApplication implements IApplication {
         }
 
         @Override
-        public Iterable<IMethodInformation> stack() {
+        public ThreadState state() {
+            return state;
+        }
+
+        @Override
+        public Iterable<IProcessContext> stack() {
             return stack;
         }
 
         @Override
-        public void methodEnter(String method, MethodType type, String info) {
-            IMethodInformation item = new MethodInfo(method, type, info);
+        public IProcessContext methodEnter(String method, MethodType type, String info) {
+            IProcessContext item = new ProcessContext(method, type, info);
             stack.push(item);
+            return item;
         }
 
         @Override
         public void methodLive(String info) {
-            IMethodInformation item = stack.peek();
+            updateInfo(info);
+        }
+
+        @Override
+        public void methodLive(ThreadState state) {
+            this.state = state;
+        }
+
+        @Override
+        public void methodLive(ThreadState state, String info) {
+            this.state = state;
+            updateInfo(info);
+        }
+
+        private void updateInfo(String info) {
+            ProcessContext item = (ProcessContext) stack.peek();
             if (item != null) {
-                ((MethodInfo) item).info(info);
+                item.info(info);
             }
         }
 
@@ -1512,15 +1673,26 @@ public abstract class BaseApplication implements IApplication {
             return language;
         }
 
+        @Override
+        public IProcessContext context() {
+            IProcessContext context = stack.peek();
+            if (context == null) {
+                context = new ProcessContext("UNKNOWN", MethodType.System, "");
+            }
+            return context;
+        }
+
     }
 
-    private static class MethodInfo implements IMethodInformation {
+    private static class ProcessContext implements IProcessContext {
 
         private final String name;
         private final MethodType type;
         private String info;
+        private boolean escape = false;
+        private boolean trim = false;
 
-        public MethodInfo(String name, MethodType type, String info) {
+        public ProcessContext(String name, MethodType type, String info) {
             this.name = name;
             this.type = type;
             this.info = info;
@@ -1543,6 +1715,63 @@ public abstract class BaseApplication implements IApplication {
 
         public void info(String info) {
             this.info = info;
+        }
+
+        @Override
+        public boolean escape() {
+            return escape;
+        }
+
+        @Override
+        public IProcessContext escape(boolean escape) {
+            this.escape = escape;
+            return this;
+        }
+
+        @Override
+        public boolean trim() {
+            return trim;
+        }
+
+        @Override
+        public IProcessContext trim(boolean trim) {
+            this.trim = trim;
+            return this;
+        }
+
+        @Override
+        public IProcessSnapshot save() {
+            return new ProcessSnapshot(escape, trim);
+        }
+
+        @Override
+        public void restore(IProcessSnapshot snapshot) {
+            if (snapshot != null) {
+                this.escape = snapshot.escape();
+                this.trim = snapshot.trim();
+            }
+        }
+
+    }
+
+    private static class ProcessSnapshot implements IProcessSnapshot {
+
+        private final boolean escape;
+        private final boolean trim;
+
+        public ProcessSnapshot(boolean escape, boolean trim) {
+            this.escape = escape;
+            this.trim = trim;
+        }
+
+        @Override
+        public boolean escape() {
+            return escape;
+        }
+
+        @Override
+        public boolean trim() {
+            return trim;
         }
 
     }

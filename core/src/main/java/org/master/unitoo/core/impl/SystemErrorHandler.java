@@ -11,9 +11,11 @@ import javax.servlet.http.HttpServletResponse;
 import org.master.unitoo.core.api.IControllerMethod;
 import org.master.unitoo.core.api.annotation.Component;
 import org.master.unitoo.core.api.components.IFormatter;
+import org.master.unitoo.core.api.components.mappers.HTML_CONTENT;
 import org.master.unitoo.core.base.BaseErrorHandler;
 import org.master.unitoo.core.errors.MethodNotAllowed;
 import org.master.unitoo.core.errors.MethodNotFound;
+import org.master.unitoo.core.api.IDataContent;
 
 /**
  *
@@ -21,11 +23,6 @@ import org.master.unitoo.core.errors.MethodNotFound;
  */
 @Component("core")
 public class SystemErrorHandler extends BaseErrorHandler {
-
-    @Override
-    protected String mime() {
-        return "text/html";
-    }
 
     @Override
     protected void flushError(IControllerMethod method, String mapping, HttpServletResponse response, IFormatter formatter, Throwable error) throws Exception {
@@ -40,6 +37,11 @@ public class SystemErrorHandler extends BaseErrorHandler {
         error.printStackTrace(new PrintWriter(buf));
         String text = buf.toString().replace("\n", "<br>");
         response.getWriter().print(text);
+    }
+
+    @Override
+    protected IDataContent content() {
+        return app().component(HTML_CONTENT.class);
     }
 
 }

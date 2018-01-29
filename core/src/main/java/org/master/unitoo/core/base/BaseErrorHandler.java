@@ -14,7 +14,7 @@ import org.master.unitoo.core.api.components.IFormatter;
 import org.master.unitoo.core.errors.MethodFailed;
 import org.master.unitoo.core.types.ComponentContext;
 import org.master.unitoo.core.types.ComponentType;
-import org.master.unitoo.core.types.MIME;
+import org.master.unitoo.core.api.IDataContent;
 
 /**
  *
@@ -72,19 +72,14 @@ public abstract class BaseErrorHandler implements IErrorHandler {
     @SuppressWarnings("UseSpecificCatch")
     public void flush(IControllerMethod method, String mapping, HttpServletResponse response, IFormatter formatter, Throwable error) {
         try {
-            String mime = mime();
-            if (MIME.WithCharset(mime)) {
-                response.setContentType(mime + "; charset=" + formatter.encoding().name());
-            } else {
-                response.setContentType(mime);
-            }
+            response.setContentType(content().contentType(formatter.encoding()).toString());
             flushError(method, mapping, response, formatter, error);
         } catch (Throwable t) {
             app().log().error(new MethodFailed(mapping, t));
         }
     }
 
-    protected abstract String mime();
+    protected abstract IDataContent content();
 
     protected abstract void flushError(IControllerMethod method, String mapping, HttpServletResponse response, IFormatter formatter, Throwable error) throws Exception;
 

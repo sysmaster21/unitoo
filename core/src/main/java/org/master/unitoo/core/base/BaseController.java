@@ -5,6 +5,7 @@
  */
 package org.master.unitoo.core.base;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,11 +19,13 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.http.entity.ContentType;
 import org.apache.tomcat.util.http.fileupload.FileItem;
 import org.apache.tomcat.util.http.fileupload.FileItemFactory;
 import org.apache.tomcat.util.http.fileupload.FileUploadException;
@@ -31,8 +34,8 @@ import org.apache.tomcat.util.http.fileupload.servlet.ServletFileUpload;
 import org.master.unitoo.core.UniToo;
 import org.master.unitoo.core.api.IApplication;
 import org.master.unitoo.core.api.IBootInfo;
+import org.master.unitoo.core.api.IBusinessObject;
 import org.master.unitoo.core.api.IControllerMethod;
-import org.master.unitoo.core.api.IFormatContext;
 import org.master.unitoo.core.api.ILogger;
 import org.master.unitoo.core.api.annotation.Request;
 import org.master.unitoo.core.api.annotation.Response;
@@ -47,7 +50,6 @@ import org.master.unitoo.core.types.RequestMethod;
 import org.master.unitoo.core.types.RunnableState;
 import org.master.unitoo.core.api.components.IErrorHandler;
 import org.master.unitoo.core.api.components.IValidator;
-import org.master.unitoo.core.api.synthetic.ICookieBuilder;
 import org.master.unitoo.core.api.synthetic.IncomeRequestFile;
 import org.master.unitoo.core.api.synthetic.RequestAddress;
 import org.master.unitoo.core.api.synthetic.RequestFile;
@@ -60,12 +62,14 @@ import org.master.unitoo.core.errors.ParameterRangeException;
 import org.master.unitoo.core.impl.RequestParameter;
 import org.master.unitoo.core.impl.RequestParameterValidation;
 import org.master.unitoo.core.impl.RequestParametersList;
-import org.master.unitoo.core.types.MIME;
 import static org.master.unitoo.core.types.RequestParamMode.Body;
 import static org.master.unitoo.core.types.RequestParamMode.Header;
 import org.master.unitoo.core.types.SecureLevel;
-import org.master.unitoo.core.api.synthetic.IResponseOptions;
 import org.master.unitoo.core.api.IHttpFlushable;
+import org.master.unitoo.core.api.IProcessSnapshot;
+import org.master.unitoo.core.api.IResponse;
+import org.master.unitoo.core.types.Decision;
+import org.master.unitoo.core.api.IDataContent;
 
 /**
  *
@@ -223,16 +227,19 @@ public abstract class BaseController implements IController {
         private final EnumMap<RequestMethod, RequestMethod> types = new EnumMap<>(RequestMethod.class);
         private final Class<? extends IErrorHandler> errorHanlerClass;
         private final Class<? extends IFormatter> inFormatClass;
+        private IFormatter inFormatter;
         private final Class<? extends IFormatter> outFormatClass;
+        private IFormatter outFormatter;
+        private final Class<? extends IDataContent> inContentClass;
+        private IDataContent inContent;
+        private final Class<? extends IDataContent> outContentClass;
+        private IDataContent outContent;
         private final Method method;
         private final BaseController parent;
         private IErrorHandler errorHandler;
-        private IFormatter inFormatter;
-        private IFormatter outFormatter;
         private final RequestParametersList params;
         private final SecureLevel secureLevel;
-        private final String inMime;
-        private final String outMime;
+        private final boolean mimeStrict;
 
         public ControllerMethod(
                 String base,
@@ -249,18 +256,19 @@ public abstract class BaseController implements IController {
             this.inFormatClass = rqMapping.format();
             this.outFormatClass = rsMapping == null ? IFormatter.class : rsMapping.format();
             this.secureLevel = rqMapping.secure();
-            this.inMime = rqMapping.mime();
-            this.outMime = rsMapping == null ? "" : rsMapping.mime();
-            this.outEscape = UniToo.getEffectiveDecision(parent.app().defaults().isEscapeControllerResult(), rsMapping == null ? null : rsMapping.escape());
-            this.outTrim = UniToo.getEffectiveDecision(parent.app().defaults().isTrimControllerResult(), rsMapping == null ? null : rsMapping.trim());
-            this.inEscape = UniToo.getEffectiveDecision(parent.app().defaults().isEscapeControllerParams(), rqMapping.escape());
-            this.inTrim = UniToo.getEffectiveDecision(parent.app().defaults().isTrimControllerParams(), rqMapping.trim());
+            this.inContentClass = rqMapping.content();
+            this.mimeStrict = rqMapping.strictContent();
+            this.outContentClass = rsMapping == null || rsMapping.content().length == 0 ? IDataContent.class : rsMapping.content()[0];
+            this.outEscape = Decision.Get(parent.app().defaults().isEscapeControllerResult(), rsMapping == null ? null : rsMapping.escape());
+            this.outTrim = Decision.Get(parent.app().defaults().isTrimControllerResult(), rsMapping == null ? null : rsMapping.trim());
+            this.inEscape = Decision.Get(parent.app().defaults().isEscapeControllerParams(), rqMapping.escape());
+            this.inTrim = Decision.Get(parent.app().defaults().isTrimControllerParams(), rqMapping.trim());
 
             for (RequestMethod item : rqMapping.type()) {
                 this.types.put(item, item);
             }
 
-            params = new RequestParametersList(parent.app(), method, true, inEscape, inTrim);
+            params = new RequestParametersList(parent.app(), method, inEscape, inTrim);
         }
 
         @Override
@@ -271,7 +279,7 @@ public abstract class BaseController implements IController {
         private IErrorHandler getErrorHandler() {
             if (errorHandler == null) {
                 if (errorHanlerClass == IErrorHandler.class) {
-                    return parent.app().defaults().errorHandler();
+                    errorHandler = parent.app().defaults().errorHandler();
                 } else {
                     errorHandler = parent.app().component(errorHanlerClass);
                 }
@@ -282,7 +290,7 @@ public abstract class BaseController implements IController {
         private IFormatter getInFormatter() {
             if (inFormatter == null) {
                 if (inFormatClass == IFormatter.class) {
-                    return parent.app().defaults().formatter();
+                    inFormatter = parent.app().defaults().formatter();
                 } else {
                     inFormatter = parent.app().component(inFormatClass);
                 }
@@ -294,12 +302,34 @@ public abstract class BaseController implements IController {
         public IFormatter getOutFormat() {
             if (outFormatter == null) {
                 if (outFormatClass == IFormatter.class) {
-                    return parent.app().defaults().formatter();
+                    outFormatter = parent.app().defaults().formatter();
                 } else {
                     outFormatter = parent.app().component(outFormatClass);
                 }
             }
             return outFormatter;
+        }
+
+        private IDataContent getInContent(String mime) {
+            if (inContent == null) {
+                if (inContentClass == IDataContent.class) {
+                    return parent.app().defaults().content(mime);
+                } else {
+                    inContent = parent.app().component(inContentClass);
+                }
+            }
+            return inContent;
+        }
+
+        private IDataContent getOutContent() {
+            if (outContent == null) {
+                if (outContentClass == IDataContent.class) {
+                    outContent = parent.app().defaults().content(null);
+                } else {
+                    outContent = parent.app().component(outContentClass);
+                }
+            }
+            return outContent;
         }
 
         private String extractFileName(HttpServletRequest req) {
@@ -315,20 +345,22 @@ public abstract class BaseController implements IController {
 
         @Override
         @SuppressWarnings({"TooBroadCatch", "UseSpecificCatch"})
-        public void process(RequestMethod type, String fromIP, HttpServletRequest req, HttpServletResponse resp, ILogger log) throws Exception {
+        public void process(RequestMethod type, String fromIP, HttpServletRequest req, HttpServletResponse httpResponse, ILogger log) throws Exception {
             if (parent.state == RunnableState.Running) {
                 parent.runCount.incrementAndGet();
 
-                String contentType = req.getContentType();
-                contentType = contentType == null ? null : contentType.split(";")[0];
+                log.debug("Content type: " + req.getContentType());
+                ContentType contentType = req.getContentType() == null || req.getContentType().trim().isEmpty()
+                        ? ContentType.TEXT_HTML
+                        : ContentType.parse(req.getContentType());
 
-                log.debug("Content type: " + contentType);
-
-                if (!inMime.isEmpty()) {
-                    if (!inMime.equals(contentType)) {
-                        throw new InvalidContentType(contentType);
+                if (mimeStrict && inContentClass != IDataContent.class) {
+                    if (!getInContent(null).contentType("UTF-8").getMimeType().equals(contentType.getMimeType())) {
+                        throw new InvalidContentType(contentType.getMimeType());
                     }
                 }
+
+                IProcessSnapshot snapshot = parent.app().process().context().save();
 
                 try {
                     if (types.containsKey(type)) {
@@ -369,7 +401,7 @@ public abstract class BaseController implements IController {
                                 }
                             }
 
-                            if (contentType != null && contentType.startsWith(MIME.MULTIPART_FORM_DATA)) {
+                            if (contentType.getMimeType() != null && contentType.getMimeType().equalsIgnoreCase("multipart/form-data")) {
                                 log.debug("Multipart data:");
                                 multipart = new HashMap<>();
                                 FileItemFactory factory = new DiskFileItemFactory();
@@ -387,9 +419,9 @@ public abstract class BaseController implements IController {
                                             }
                                             items.add(item);
                                             if (item.isFormField()) {
-                                                log.debug("\t" + paramName + " = " + item.getString());
+                                                log.debug("\t" + paramName + " [" + item.getContentType() + "] = " + item.getString());
                                             } else {
-                                                log.debug("\t" + paramName + " = " + item.getContentType() + "; length: " + item.getSize());
+                                                log.debug("\t" + paramName + " [" + item.getContentType() + "] = length: " + item.getSize());
                                             }
                                         }
                                     }
@@ -401,9 +433,11 @@ public abstract class BaseController implements IController {
                             for (int i = 0; i < args.length; i++) {
                                 RequestParameter param = params.parameter(i);
 
-                                if (IResponseOptions.class.isAssignableFrom(param.type())) {
-                                    args[i] = param.isArray() ? new ResponseOptions[]{new ResponseOptions(resp)} : new ResponseOptions(resp);
-                                } else if (RequestAddress.class.isAssignableFrom(param.type())) {
+                                parent.app().process().context()
+                                        .escape(param.formats().escape())
+                                        .trim(param.formats().trim());
+
+                                if (RequestAddress.class.isAssignableFrom(param.type())) {
                                     RequestAddress addr = new RequestAddress(
                                             req.getRemoteHost(),
                                             fromIP,
@@ -440,8 +474,20 @@ public abstract class BaseController implements IController {
                                                 direct.add(req.getInputStream());
                                                 log.debug("Body: stream");
                                             } else if (RequestFile.class.isAssignableFrom(param.type())) {
-                                                direct.add(new StreamRequestFile(req.getInputStream(), contentType, extractFileName(req)));
+                                                direct.add(new StreamRequestFile(req.getInputStream(), extractFileName(req), contentType));
                                                 log.debug("Body: file");
+                                            } else if (IBusinessObject.class.isAssignableFrom(param.type())) {
+                                                InputStream input = req.getInputStream();
+                                                if (log.getDebugState()) {
+                                                    ByteArrayOutputStream buf = new ByteArrayOutputStream();
+                                                    UniToo.Copy(req.getInputStream(), buf);
+                                                    log.debug("Body:\n" + new String(buf.toByteArray(), "UTF-8"));
+                                                    input = new ByteArrayInputStream(buf.toByteArray());
+                                                }
+                                                direct.add(param.formats().content(getInContent(contentType.getMimeType())).deserialize(
+                                                        param.type(),
+                                                        input,
+                                                        param.formats().format(getInFormatter())));
                                             } else {
                                                 ByteArrayOutputStream buf = new ByteArrayOutputStream();
                                                 UniToo.Copy(req.getInputStream(), buf);
@@ -449,16 +495,16 @@ public abstract class BaseController implements IController {
                                                 if (byte[].class.isAssignableFrom(param.type())) {
                                                     direct.add(body);
                                                 } else {
-                                                    values.add(new String(body, getInFormatter().encoding()));
+                                                    values.add(new String(body, param.formats().format(getInFormatter()).encoding()));
                                                 }
                                                 if (log.getDebugState()) {
                                                     log.debug("Body:\n");
-                                                    log.debug(new String(body, getInFormatter().encoding()));
+                                                    log.debug(new String(body, param.formats().format(getInFormatter()).encoding()));
                                                 }
                                             }
                                             break;
                                         default:
-                                            if (multipart != null) {
+                                            if (multipart != null && (param.forMethod() == RequestMethod.DEFAULT || param.forMethod() == RequestMethod.POST)) {
                                                 List<FileItem> items = multipart.get(param.name());
                                                 if (items != null) {
                                                     for (FileItem item : items) {
@@ -466,6 +512,11 @@ public abstract class BaseController implements IController {
                                                             direct.add(item.getInputStream());
                                                         } else if (RequestFile.class.isAssignableFrom(param.type())) {
                                                             direct.add(new IncomeRequestFile(item));
+                                                        } else if (IBusinessObject.class.isAssignableFrom(param.type())) {
+                                                            direct.add(param.formats().content(getInContent(ContentType.parse(item.getContentType()).getMimeType())).deserialize(
+                                                                    param.type(),
+                                                                    item.getInputStream(),
+                                                                    param.formats().format(getInFormatter())));
                                                         } else if (byte[].class.isAssignableFrom(param.type())) {
                                                             ByteArrayOutputStream buf = new ByteArrayOutputStream();
                                                             UniToo.Copy(item.getInputStream(), buf);
@@ -478,7 +529,7 @@ public abstract class BaseController implements IController {
                                                         }
                                                     }
                                                 }
-                                            } else {
+                                            } else if (param.forMethod() == RequestMethod.DEFAULT || param.forMethod() == RequestMethod.GET) {
                                                 String[] vals = req.getParameterValues(param.name());
                                                 if (vals != null && vals.length > 0) {
                                                     if (param.type().isArray()) {
@@ -503,11 +554,11 @@ public abstract class BaseController implements IController {
                                             args[i] = Array.newInstance(param.type(), values.size());
 
                                             for (int v = 0; v < values.size(); v++) {
-                                                ((Object[]) args[i])[v] = processParamValue(param, values.get(i));
+                                                ((Object[]) args[i])[v] = processParamValue(param, values.get(i), contentType);
                                             }
 
                                         } else {
-                                            args[i] = processParamValue(param, values.get(0));
+                                            args[i] = processParamValue(param, values.get(0), contentType);
                                         }
                                     }
                                 }
@@ -515,16 +566,53 @@ public abstract class BaseController implements IController {
 
                             Object obj = method.invoke(parent, args);
 
+                            parent.app().process().context()
+                                    .escape(outEscape)
+                                    .trim(outTrim);
+
                             if (obj != null) {
+                                log.debug("Response:");
                                 if (obj instanceof IHttpFlushable) {
-                                    ((IHttpFlushable) obj).flush(resp);
-                                    log.debug("Return: flushable as " + obj.getClass().getName());
+                                    ((IHttpFlushable) obj).flush(httpResponse);
+                                    log.debug("\tBody: " + obj.getClass().getName());
+                                } else if (obj instanceof IResponse) {
+                                    IResponse<Object> response = (IResponse) obj;
+                                    for (Map.Entry<String, List<String>> entry : response.getHeaders().entrySet()) {
+                                        for (String value : entry.getValue()) {
+                                            httpResponse.addHeader(entry.getKey(), value);
+                                        }
+                                    }
+
+                                    for (Cookie cookie : response.cookies()) {
+                                        httpResponse.addCookie(cookie);
+                                    }
+                                    flush(httpResponse, response.body(), log, response.content());
                                 } else {
-                                    flush(resp, obj, log);
+                                    flush(httpResponse, obj, log, null);
+                                }
+
+                                if (log.getDebugState()) {
+                                    log.debug("\tHeaders:");
+                                    StringBuilder buf = new StringBuilder();
+                                    for (String header : httpResponse.getHeaderNames()) {
+                                        boolean first = true;
+                                        buf.setLength(0);
+                                        buf.append("\t\t").append(header).append(" = ");
+                                        for (String hvalue : httpResponse.getHeaders(header)) {
+                                            if (first) {
+                                                first = false;
+                                            } else {
+                                                buf.append("; ");
+                                            }
+
+                                            buf.append(hvalue);
+                                        }
+                                        log.debug(buf.toString());
+                                    }
                                 }
                             } else {
-                                log.debug("Return: EMPTY");
-                                resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+                                log.debug("Response: EMPTY");
+                                httpResponse.setStatus(HttpServletResponse.SC_NO_CONTENT);
                             }
                         } finally {
                             parent.app().process().methodExit();
@@ -533,6 +621,7 @@ public abstract class BaseController implements IController {
                         throw new MethodNotAllowed(type.name(), mapping);
                     }
                 } finally {
+                    parent.app().process().context().restore(snapshot);
                     parent.runCount.decrementAndGet();
                     parent.app().afterRequest(this);
                 }
@@ -541,8 +630,18 @@ public abstract class BaseController implements IController {
             }
         }
 
-        private Object processParamValue(RequestParameter param, String value) throws Exception {
-            Object result = parent.app().parse(getInFormatter(), value, param.type(), param.getFormatContext());
+        private Object processParamValue(RequestParameter param, String value, ContentType contentType) throws Exception {
+            Object result;
+            if (IBusinessObject.class.isAssignableFrom(param.type())) {
+                result = value == null
+                        ? null
+                        : param.formats().content(getInContent(contentType.getMimeType())).deserialize(
+                                param.type(),
+                                new ByteArrayInputStream(value.getBytes(param.formats().format(getInFormatter()).encoding())),
+                                param.formats().format(getInFormatter()));
+            } else {
+                result = parent.app().parse(getInFormatter(), value, param.type());
+            }
             return validate(result, param);
         }
 
@@ -554,36 +653,28 @@ public abstract class BaseController implements IController {
             }
         }
 
-        private void flush(HttpServletResponse resp, Object obj, ILogger log) throws IOException {
-            String contentType;
-            if (outMime.isEmpty()) {
-                contentType = MIME.ByClass(obj.getClass(), MIME.HTML);
+        private void flush(HttpServletResponse resp, Object obj, ILogger log, IDataContent content) throws IOException {
+            if (content == null) {
+                content = getOutContent();
+            }
+            resp.setContentType(content.contentType(getOutFormat().encoding()).toString());
+
+            if (obj instanceof IBusinessObject) {
+                if (log.getDebugState()) {
+                    ByteArrayOutputStream buf = new ByteArrayOutputStream();
+                    content.serialize((IBusinessObject) obj, buf, getOutFormat());
+                    log.debug("\tBody:\n" + new String(buf.toByteArray(), getOutFormat().encoding()));
+                }
+
+                content.serialize((IBusinessObject) obj, resp.getOutputStream(), getOutFormat());
             } else {
-                contentType = outMime;
-            }
-
-            if (MIME.WithCharset(contentType)) {
-                contentType = contentType + "; charset=" + getOutFormat().encoding().name();
-            }
-
-            String result = getOutFormat().format(obj, new IFormatContext() {
-                @Override
-                public boolean escape() {
-                    return outEscape;
+                String result = getOutFormat().format(obj);
+                if (log.getDebugState()) {
+                    log.debug("\tBody:\n" + result);
                 }
 
-                @Override
-                public boolean trim() {
-                    return outTrim;
-                }
-            });
-
-            if (log.getDebugState()) {
-                log.debug("Return: " + contentType + "\n" + result);
+                resp.getWriter().print(result);
             }
-
-            resp.setContentType(contentType);
-            resp.getWriter().print(result);
         }
 
         private Object validate(Object value, RequestParameter param) throws ParameterInvalidException {
@@ -648,109 +739,6 @@ public abstract class BaseController implements IController {
         @Override
         public SecureLevel secureLevel() {
             return secureLevel;
-        }
-
-    }
-
-    private static class ResponseOptions implements IResponseOptions {
-
-        private final HttpServletResponse response;
-
-        public ResponseOptions(HttpServletResponse response) {
-            this.response = response;
-        }
-
-        @Override
-        public void setHeader(String name, String value) {
-            response.setHeader(name, value);
-        }
-
-        @Override
-        public void content(String type) {
-            response.setContentType(type);
-        }
-
-        @Override
-        public void content(String type, String encoding) {
-            response.setContentType(type);
-            response.setCharacterEncoding(encoding);
-        }
-
-        @Override
-        public void addCookie(String name, String value) {
-            response.addCookie(new Cookie(name, value));
-        }
-
-        @Override
-        public void addCookie(String name, String value, boolean secured, boolean httpOnly) {
-            Cookie cookie = new Cookie(name, value);
-            cookie.setSecure(secured);
-            cookie.setHttpOnly(httpOnly);
-            response.addCookie(cookie);
-        }
-
-        @Override
-        public ICookieBuilder buildCookie(String name, String value) {
-            return new CookieBuilder(response, name, value);
-        }
-
-    }
-
-    private static class CookieBuilder implements ICookieBuilder {
-
-        private final HttpServletResponse response;
-        private final Cookie cookie;
-
-        public CookieBuilder(HttpServletResponse response, String name, String value) {
-            this.response = response;
-            cookie = new Cookie(name, value);
-        }
-
-        @Override
-        public ICookieBuilder comment(String text) {
-            cookie.setComment(text);
-            return this;
-        }
-
-        @Override
-        public ICookieBuilder domain(String pattern) {
-            cookie.setDomain(pattern);
-            return this;
-        }
-
-        @Override
-        public ICookieBuilder maxAge(int expire) {
-            cookie.setMaxAge(expire);
-            return this;
-        }
-
-        @Override
-        public ICookieBuilder path(String uri) {
-            cookie.setPath(uri);
-            return this;
-        }
-
-        @Override
-        public ICookieBuilder secure(boolean flag) {
-            cookie.setSecure(flag);
-            return this;
-        }
-
-        @Override
-        public ICookieBuilder httpOnly(boolean flag) {
-            cookie.setHttpOnly(flag);
-            return this;
-        }
-
-        @Override
-        public ICookieBuilder version(int v) {
-            cookie.setVersion(v);
-            return this;
-        }
-
-        @Override
-        public void add() {
-            response.addCookie(cookie);
         }
 
     }

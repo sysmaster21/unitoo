@@ -5,10 +5,7 @@
  */
 package org.master.unitoo.core.api;
 
-import org.master.unitoo.core.api.components.ILanguage;
-import org.master.unitoo.core.api.util.ISession;
 import org.master.unitoo.core.types.MethodType;
-import org.master.unitoo.core.types.ThreadType;
 
 /**
  *
@@ -16,18 +13,21 @@ import org.master.unitoo.core.types.ThreadType;
  */
 public interface IProcessContext {
 
-    ThreadType type();
+    String name();
 
-    Iterable<IMethodInformation> stack();
+    MethodType type();
 
-    void methodEnter(String method, MethodType type, String info);
+    String info();
 
-    void methodLive(String info);
+    IProcessSnapshot save();
 
-    void methodExit();
+    boolean escape();
 
-    ISession session();
-    
-    ILanguage language();
+    IProcessContext escape(boolean escape);
 
+    boolean trim();
+
+    IProcessContext trim(boolean trim);
+
+    void restore(IProcessSnapshot snapshot);
 }

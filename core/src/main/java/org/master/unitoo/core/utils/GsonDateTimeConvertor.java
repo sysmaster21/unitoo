@@ -15,7 +15,7 @@ import com.google.gson.JsonSerializer;
 import java.lang.reflect.Type;
 import java.text.ParseException;
 import org.master.unitoo.core.api.components.IFormatter;
-import org.master.unitoo.core.types.DateTime;
+import org.master.unitoo.core.api.synthetic.DateTime;
 
 /**
  *

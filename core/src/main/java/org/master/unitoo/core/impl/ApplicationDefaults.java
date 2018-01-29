@@ -5,11 +5,15 @@
  */
 package org.master.unitoo.core.impl;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import org.apache.http.entity.ContentType;
 import org.master.unitoo.core.api.IApplication;
 import org.master.unitoo.core.api.IApplicationDefaults;
 import org.master.unitoo.core.api.components.IErrorHandler;
 import org.master.unitoo.core.api.components.IFormatter;
 import org.master.unitoo.core.api.components.ILanguage;
+import org.master.unitoo.core.api.IDataContent;
 
 /**
  *
@@ -25,6 +29,7 @@ public class ApplicationDefaults implements IApplicationDefaults {
     private boolean trimControllerResult = true;
     private boolean trimExternalParams = true;
     private boolean trimExternalResult = true;
+    private Map<String, IDataContent> defContent = new ConcurrentHashMap<>();
     private IFormatter defFormat;
     private IErrorHandler defHandler;
     private ILanguage defLanguage;
@@ -104,6 +109,21 @@ public class ApplicationDefaults implements IApplicationDefaults {
 
     public void setTrimExternalResult(boolean trimExternalResult) {
         this.trimExternalResult = trimExternalResult;
+    }
+
+    @Override
+    public IDataContent content(String mime) {
+        if (mime == null || mime.isEmpty()) {
+            return defContent.get(ContentType.TEXT_HTML.getMimeType());
+        } else {
+            IDataContent content = defContent.get(mime);
+            return content == null ? defContent.get(ContentType.TEXT_HTML.getMimeType()) : content;
+        }
+    }
+
+    public void addContent(Class<? extends IDataContent> defContent) {
+        IDataContent content = app.component(defContent);
+        this.defContent.put(content.contentType("UTF-8").getMimeType(), content);
     }
 
     @Override

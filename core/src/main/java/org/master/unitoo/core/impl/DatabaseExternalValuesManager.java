@@ -7,8 +7,8 @@ package org.master.unitoo.core.impl;
 
 import java.util.concurrent.ConcurrentHashMap;
 import org.master.unitoo.core.api.IExternalStorage;
-import org.master.unitoo.core.server.FileCheckTask;
 import org.master.unitoo.core.base.BaseExternalValueManager;
+import org.master.unitoo.core.server.DatabaseCheckTask;
 
 /**
  *
@@ -18,26 +18,28 @@ import org.master.unitoo.core.base.BaseExternalValueManager;
  */
 public abstract class DatabaseExternalValuesManager<T, P> extends BaseExternalValueManager<T, P> {
 
-    private final ConcurrentHashMap<T, PropertiesStorage> storages = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<T, DatabaseStorage> storages = new ConcurrentHashMap<>();
 
-    protected abstract PropertiesStorage create(T source);
+    protected abstract DatabaseStorage create(T source);
+
+    public abstract Object getItemCode(Object item);
 
     @Override
     public IExternalStorage<T, P> register(T source) {
-        PropertiesStorage storage = create(source);
+        DatabaseStorage storage = create(source);
         storages.put(source, storage);
         return storage;
     }
 
     @Override
     public void bootComplete() {
-        FileCheckTask task = app().component(FileCheckTask.class);
+        DatabaseCheckTask task = app().component(DatabaseCheckTask.class);
         if (task != null) {
-            for (PropertiesStorage storage : storages.values()) {
-                storage.doMonitor(task);
+            for (DatabaseStorage storage : storages.values()) {
+                task.startCheck(storage);
             }
         } else {
-            app().log().warning("No file scanner found: " + FileCheckTask.class.getName());
+            app().log().warning("No db scanner found: " + DatabaseCheckTask.class.getName());
         }
     }
 

@@ -27,7 +27,7 @@ public enum SystemErrorCodes implements IErrorType {
     UTS_NoSecurityException("UTS012"),
     UTS_SettingParseException("UTS013"),
     UTS_TypeConvertExpection("UTS014"),
-    UTS_XMLTranformException("UTS015"),
+    UTS_XMLException("UTS015"),
     UTS_EmptyParameterException("UTS016"),
     UTS_InvalidParameterException("UTS017"),
     UTS_ParameterRangeException("UTS018"),

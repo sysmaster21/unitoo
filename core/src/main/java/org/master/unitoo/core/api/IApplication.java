@@ -5,6 +5,9 @@
  */
 package org.master.unitoo.core.api;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import org.master.unitoo.core.api.components.IFormatter;
 import javax.servlet.ServletContextListener;
 import javax.servlet.http.HttpSession;
@@ -26,6 +29,7 @@ import org.master.unitoo.core.types.ComponentType;
  */
 public interface IApplication extends ServletContextListener {
 
+    //-------------------------------------------------------------------------- Settings
     IApplicationDefaults defaults();
 
     String serverId();
@@ -36,24 +40,23 @@ public interface IApplication extends ServletContextListener {
 
     String version();
 
+    //-------------------------------------------------------------------------- Registration
     void register(ISecurity security);
 
     void register(IControllerMethod method);
 
+    //-------------------------------------------------------------------------- Formatting
     String format(Object obj);
 
     String format(IFormatter formatter, Object obj);
-
-    String format(IFormatter formatter, Object obj, IFormatContext context);
 
     <T> T parse(String value, Class<T> clazz) throws TypeConvertExpection;
 
     <T> T parse(IFormatter formatter, String value, Class<T> clazz) throws TypeConvertExpection;
 
-    <T> T parse(IFormatter formatter, String value, Class<T> clazz, IFormatContext context) throws TypeConvertExpection;
-
     <T> T convert(Object value, Class<T> clazz) throws TypeConvertExpection;
 
+    //-------------------------------------------------------------------------- Components
     ILogger log();
 
     ILogger log(Class<? extends ILoggerFactory> factory, Class component);
@@ -66,20 +69,25 @@ public interface IApplication extends ServletContextListener {
 
     <T extends IComponent> Iterable<T> components(Class<T> clazz);
 
-    void execute(IBackgroundTask task, long delay);
+    ILanguage language(String code);
 
+    Iterable<ILanguage> languages();
+
+    //-------------------------------------------------------------------------- System
     void beforeRequest(IControllerMethod method, HttpSession session) throws AccessDenied, InvalidSession, NoSecurityException;
 
     void afterRequest(IControllerMethod method) throws AccessDenied, InvalidSession;
 
-    IProcessContext process();
-
-    IProcessContext process(Thread thread);
-
     <T extends ISQLBatch> T cast(Class<T> iface) throws SystemException;
 
-    ILanguage language(String code);
+    //-------------------------------------------------------------------------- Processes
+    void execute(IBackgroundTask task, long delay);
 
-    Iterable<ILanguage> languages();
+    IProcess process();
+
+    IProcess process(Thread thread);
+
+    //-------------------------------------------------------------------------- BusinessObjects
+    Iterable<IBusinessField> businessFields(Class<? extends IBusinessObject> type);
 
 }

@@ -16,7 +16,6 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import org.master.unitoo.core.types.Decision;
 
 /**
  *
@@ -32,10 +31,6 @@ public class UniToo {
     public final static int BOOT_PRIORITY_FIRST = 2;
     public final static int BOOT_PRIORITY_NORMAL = 3;
     public final static int BOOT_PRIORITY_LAST = 4;
-
-    public static boolean getEffectiveDecision(boolean parent, Decision decision) {
-        return decision == null || decision == Decision.Parent ? parent : decision == Decision.Make;
-    }
 
     public static void Copy(final InputStream input, final OutputStream output) throws IOException {
         try (ReadableByteChannel src = Channels.newChannel(input)) {

@@ -26,6 +26,7 @@ import org.master.unitoo.core.api.components.ISettings;
 import org.master.unitoo.core.api.components.IValidator;
 import org.master.unitoo.core.api.components.ext.IHTTPService;
 import org.master.unitoo.core.impl.ExternalHTTPService;
+import org.master.unitoo.core.api.IDataContent;
 
 /**
  *
@@ -37,11 +38,12 @@ public enum ComponentType {
     ErrorHandler(IErrorHandler.class, UniToo.BOOT_PRIORITY_INIT),
     ConfigManager(IConfigManager.class, UniToo.BOOT_PRIORITY_INIT),
     I18nManager(I18nManager.class, UniToo.BOOT_PRIORITY_INIT),
+    GlossaryManager(IGlossaryManager.class, UniToo.BOOT_PRIORITY_INIT),
     Logger(ILoggerFactory.class, UniToo.BOOT_PRIORITY_INIT),
     Language(ILanguage.class, UniToo.BOOT_PRIORITY_INIT),
     Labels(ILabelsPack.class, UniToo.BOOT_PRIORITY_INIT),
     //
-    GlossaryManager(IGlossaryManager.class, UniToo.BOOT_PRIORITY_INIT),
+    DataContent(IDataContent.class, UniToo.BOOT_PRIORITY_CORE),
     Settings(ISettings.class, UniToo.BOOT_PRIORITY_CORE),
     Counter(ICounter.class, UniToo.BOOT_PRIORITY_CORE),
     //

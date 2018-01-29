@@ -7,7 +7,7 @@ package org.master.unitoo.core.api.components;
 
 import org.master.unitoo.core.api.ILoggableComponent;
 import org.master.unitoo.core.api.IStoppableComponent;
-import org.master.unitoo.core.types.DateTime;
+import org.master.unitoo.core.api.synthetic.DateTime;
 
 /**
  *

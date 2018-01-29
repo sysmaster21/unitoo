@@ -31,6 +31,8 @@ public interface IApplicationDefaults {
 
     boolean isTrimExternalResult();
 
+    IDataContent content(String mime);
+
     IFormatter formatter();
 
     IErrorHandler errorHandler();

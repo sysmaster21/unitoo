@@ -5,7 +5,6 @@
  */
 package org.master.unitoo.core.server;
 
-import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -14,6 +13,7 @@ import java.text.SimpleDateFormat;
 import org.master.unitoo.core.api.annotation.Component;
 import org.master.unitoo.core.base.BaseFormatter;
 import org.master.unitoo.core.api.annotation.Attribute;
+import org.master.unitoo.core.types.BinaryFormat;
 
 /**
  *
@@ -21,6 +21,9 @@ import org.master.unitoo.core.api.annotation.Attribute;
  */
 @Component("core.format")
 public class SystemFormatter extends BaseFormatter {
+
+    @Attribute(name = "binary", value = "BASE64")
+    public Setting<BinaryFormat> binary;
 
     @Attribute(name = "encoding", value = "UTF-8")
     public Setting<String> encoding;
@@ -50,9 +53,13 @@ public class SystemFormatter extends BaseFormatter {
     public Setting<String> datetime;
 
     @Override
-    protected Charset createCharset() {
-        return Charset.forName(encoding.val());
+    protected String createCharset() {
+        return encoding.val();
+    }
 
+    @Override
+    protected BinaryFormat createBinary() {
+        return binary.val();
     }
 
     @Override

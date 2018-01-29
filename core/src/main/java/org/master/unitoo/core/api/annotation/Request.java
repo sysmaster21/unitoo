@@ -14,6 +14,7 @@ import org.master.unitoo.core.api.components.IFormatter;
 import org.master.unitoo.core.types.Decision;
 import org.master.unitoo.core.types.RequestMethod;
 import org.master.unitoo.core.types.SecureLevel;
+import org.master.unitoo.core.api.IDataContent;
 
 /**
  *
@@ -32,11 +33,14 @@ public @interface Request {
 
     Class<? extends IErrorHandler> errors() default IErrorHandler.class;
 
+    SecureLevel secure() default SecureLevel.None;
+    
+    boolean strictContent() default false;
+
+    //-------------------------------------------------------------------------- Format (global)
     Class<? extends IFormatter> format() default IFormatter.class;
 
-    SecureLevel secure() default SecureLevel.None;
-
-    String mime() default "";
+    Class<? extends IDataContent> content() default IDataContent.class;
 
     Decision escape() default Decision.Parent;
 

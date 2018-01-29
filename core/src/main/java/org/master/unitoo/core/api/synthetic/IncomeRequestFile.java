@@ -7,6 +7,7 @@ package org.master.unitoo.core.api.synthetic;
 
 import java.io.IOException;
 import java.io.InputStream;
+import org.apache.http.entity.ContentType;
 import org.apache.tomcat.util.http.fileupload.FileItem;
 
 /**
@@ -14,7 +15,7 @@ import org.apache.tomcat.util.http.fileupload.FileItem;
  * @author Andrey
  */
 public class IncomeRequestFile extends RequestFile {
-    
+
     private final FileItem file;
 
     public IncomeRequestFile(FileItem file) {
@@ -23,7 +24,7 @@ public class IncomeRequestFile extends RequestFile {
 
     @Override
     public String mime() {
-        return file.getContentType();
+        return ContentType.parse(file.getContentType()).getMimeType();
     }
 
     @Override
@@ -35,9 +36,10 @@ public class IncomeRequestFile extends RequestFile {
     public InputStream stream() throws IOException {
         return file.getInputStream();
     }
-    
-    
-    
-    
-    
+
+    @Override
+    public String encoding() {
+        return ContentType.parse(file.getContentType()).getCharset().name();
+    }
+
 }

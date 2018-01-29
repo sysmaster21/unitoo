@@ -9,7 +9,7 @@ import java.io.File;
 import org.master.unitoo.core.api.ILogger;
 import org.master.unitoo.core.api.util.IMonitorListener;
 import org.master.unitoo.core.types.CRUD;
-import org.master.unitoo.core.types.DateTime;
+import org.master.unitoo.core.api.synthetic.DateTime;
 import org.master.unitoo.core.utils.AbstractMonitor;
 
 /**

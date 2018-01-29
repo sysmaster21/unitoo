@@ -103,7 +103,7 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
 
             for (ILanguage language : app().languages()) {
                 for (T item : cache.values()) {
-                    Label label = new Label(app(), name() + "." + item.code(), item.defLabel(), true, true);
+                    Label label = new Label(app(), name() + "." + item.code(), item.defLabel());
                     language.register(label);
                 }
                 try {

@@ -5,32 +5,18 @@
  */
 package org.master.unitoo.core.base;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.text.NumberFormat;
-import java.util.Date;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.TransformerFactoryConfigurationError;
 import org.master.unitoo.core.api.IApplication;
 import org.master.unitoo.core.api.IBootInfo;
-import org.master.unitoo.core.api.IFormatContext;
 import org.master.unitoo.core.api.components.IFormatter;
-import org.master.unitoo.core.api.synthetic.IJsonObject;
 import org.master.unitoo.core.errors.TypeConvertExpection;
-import org.master.unitoo.core.errors.XMLTranformException;
+import org.master.unitoo.core.errors.XMLException;
 import org.master.unitoo.core.types.ComponentContext;
 import org.master.unitoo.core.types.ComponentType;
-import org.master.unitoo.core.types.DateTime;
-import org.master.unitoo.core.types.Time;
-import org.master.unitoo.core.utils.GsonDateConvertor;
-import org.master.unitoo.core.utils.GsonDateTimeConvertor;
-import org.master.unitoo.core.utils.GsonJsonObjectConvertor;
-import org.master.unitoo.core.utils.GsonTimeConvertor;
+import org.master.unitoo.core.types.BinaryFormat;
+import org.master.unitoo.core.utils.JSONFormat;
+import org.master.unitoo.core.utils.XMLFormat;
 
 /**
  *
@@ -39,14 +25,15 @@ import org.master.unitoo.core.utils.GsonTimeConvertor;
 public abstract class BaseFormatter implements IFormatter {
 
     private ComponentContext context;
-    private final ThreadLocal<Charset> fmtCharset = new InheritableThreadLocal<>();
+    private final ThreadLocal<BinaryFormat> fmtBinary = new InheritableThreadLocal<>();
+    private final ThreadLocal<String> fmtCharset = new InheritableThreadLocal<>();
     private final ThreadLocal<DateFormat> fmtDate = new InheritableThreadLocal<>();
     private final ThreadLocal<DateFormat> fmtTime = new InheritableThreadLocal<>();
     private final ThreadLocal<DateFormat> fmtDateTime = new InheritableThreadLocal<>();
     private final ThreadLocal<NumberFormat> fmtDecimal = new InheritableThreadLocal<>();
     private final ThreadLocal<NumberFormat> fmtInteger = new InheritableThreadLocal<>();
-    private final ThreadLocal<Transformer> fmtXML = new InheritableThreadLocal<>();
-    private final ThreadLocal<Gson> fmtGson = new InheritableThreadLocal<>();
+    private final ThreadLocal<XMLFormat> fmtXML = new InheritableThreadLocal<>();
+    private final ThreadLocal<JSONFormat> fmtJson = new InheritableThreadLocal<>();
 
     protected abstract DateFormat createDateFormat();
 
@@ -58,34 +45,26 @@ public abstract class BaseFormatter implements IFormatter {
 
     protected abstract NumberFormat createIntegerFormat();
 
-    protected abstract Charset createCharset();
+    protected abstract String createCharset();
 
-    protected Transformer createXMLTransformer() throws XMLTranformException {
-        try {
-            Transformer transformer = TransformerFactory.newInstance().newTransformer();
-            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-            return transformer;
-        } catch (IllegalArgumentException | TransformerConfigurationException | TransformerFactoryConfigurationError e) {
-            throw new XMLTranformException(e);
-        }
-    }
-
-    protected Gson createGson() {
-        return new GsonBuilder()
-                .registerTypeAdapter(Date.class, new GsonDateConvertor(this))
-                .registerTypeAdapter(Time.class, new GsonTimeConvertor(this))
-                .registerTypeAdapter(DateTime.class, new GsonDateTimeConvertor(this))
-                .registerTypeHierarchyAdapter(IJsonObject.class, new GsonJsonObjectConvertor(this))
-                .disableHtmlEscaping()
-                .create();
-    }
+    protected abstract BinaryFormat createBinary();
 
     @Override
-    public Charset encoding() {
-        Charset format = fmtCharset.get();
+    public String encoding() {
+        String format = fmtCharset.get();
         if (format == null) {
             format = createCharset();
             fmtCharset.set(format);
+        }
+        return format;
+    }
+
+    @Override
+    public BinaryFormat binary() {
+        BinaryFormat format = fmtBinary.get();
+        if (format == null) {
+            format = createBinary();
+            fmtBinary.set(format);
         }
         return format;
     }
@@ -141,23 +120,23 @@ public abstract class BaseFormatter implements IFormatter {
     }
 
     @Override
-    public Transformer xml() throws XMLTranformException {
-        Transformer transformer = fmtXML.get();
-        if (transformer == null) {
-            transformer = createXMLTransformer();
-            fmtXML.set(transformer);
+    public XMLFormat xml() throws XMLException {
+        XMLFormat format = fmtXML.get();
+        if (format == null) {
+            format = new XMLFormat(this);
+            fmtXML.set(format);
         }
-        return transformer;
+        return format;
     }
 
     @Override
-    public Gson gson() {
-        Gson gson = fmtGson.get();
-        if (gson == null) {
-            gson = createGson();
-            fmtGson.set(gson);
+    public JSONFormat json() {
+        JSONFormat format = fmtJson.get();
+        if (format == null) {
+            format = new JSONFormat(this);
+            fmtJson.set(format);
         }
-        return gson;
+        return format;
     }
 
     @Override
@@ -210,30 +189,8 @@ public abstract class BaseFormatter implements IFormatter {
     }
 
     @Override
-    public String format(Object obj, IFormatContext context) {
-        return app().format(this, obj, context);
-    }
-
-    @Override
     public <T> T parse(String value, Class<T> clazz) throws TypeConvertExpection {
         return app().parse(this, value, clazz);
-    }
-
-    @Override
-    public <T> T parse(String value, Class<T> clazz, IFormatContext context) throws TypeConvertExpection {
-        return app().parse(this, value, clazz, context);
-    }
-
-    public IFormatContext currentFormatContext() {
-        return ((BaseApplication) app()).currentFormatContext();
-    }
-
-    public void enterFormatContext(IFormatContext context) {
-        ((BaseApplication) app()).enterFormatContext(context);
-    }
-
-    public void exitFormatContext() {
-        ((BaseApplication) app()).exitFormatContext();
     }
 
 }

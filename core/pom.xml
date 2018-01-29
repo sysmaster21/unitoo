@@ -5,12 +5,12 @@
     <parent>
         <groupId>org.master.unitoo</groupId>
         <artifactId>unitoo</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.1</version>
     </parent>
 
     <groupId>org.master.unitoo</groupId>
     <artifactId>unitoo-core</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>unitoo-core</name>
@@ -118,7 +118,17 @@
                         </manifestEntries>
                     </archive>
                 </configuration>
-            </plugin>        
+            </plugin>      
+            <!-- plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.7.0</version>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-Xlint:all,-options,-path</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin -->
         </plugins>
     </build>
 

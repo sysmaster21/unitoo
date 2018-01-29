@@ -5,7 +5,7 @@
  */
 package org.master.unitoo.core.impl;
 
-import org.master.unitoo.core.api.IFormatContext;
+import org.master.unitoo.core.types.RequestMethod;
 import org.master.unitoo.core.types.RequestParamMode;
 
 /**
@@ -17,35 +17,19 @@ public class RequestParameter {
     private final String name;
     private final Class type;
     private final RequestParamMode mode;
-    private final boolean escaping;
-    private final boolean trim;
+    private final RequestMethod forMethod;
     private final RequestParameterValidation validation;
-    private final String mime;
+    private final RequestParameterFormat formats;
     private final boolean array;
-    private final IFormatContext context;
 
-    public RequestParameter(String name, Class type, RequestParamMode mode,
-            boolean escaping, boolean trim, String mime, RequestParameterValidation validation
-    ) {
+    public RequestParameter(String name, Class type, RequestParamMode mode, RequestMethod forMethod, RequestParameterValidation validation, RequestParameterFormat formats) {
         this.name = name;
-        this.mode = mode == null ? RequestParamMode.Param : mode;
-        this.escaping = escaping;
-        this.trim = trim;
+        this.forMethod = forMethod;
         this.validation = validation;
-        this.mime = mime;
+        this.formats = formats;
+        this.mode = mode == null ? RequestParamMode.Param : mode;
         this.array = type.isArray();
         this.type = type.isArray() ? type.getComponentType() : type;
-        this.context = new IFormatContext() {
-            @Override
-            public boolean escape() {
-                return RequestParameter.this.escaping;
-            }
-
-            @Override
-            public boolean trim() {
-                return RequestParameter.this.trim;
-            }
-        };
     }
 
     public String name() {
@@ -60,28 +44,20 @@ public class RequestParameter {
         return mode;
     }
 
-    public boolean escaping() {
-        return escaping;
-    }
-
-    public boolean trim() {
-        return trim;
-    }
-
     public RequestParameterValidation validation() {
         return validation;
     }
 
-    public String mime() {
-        return mime;
+    public RequestParameterFormat formats() {
+        return formats;
     }
 
     public boolean isArray() {
         return array;
     }
 
-    public IFormatContext getFormatContext() {
-        return context;
+    public RequestMethod forMethod() {
+        return forMethod;
     }
 
 }

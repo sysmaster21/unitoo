@@ -11,8 +11,19 @@ package org.master.unitoo.core.types;
  */
 public enum Decision {
 
-    Make,
-    Skip,
+    Use,
+    Ignore,
     Parent;
+
+    public static boolean Get(boolean parent, Decision current) {
+        switch (current == null ? Parent : current) {
+            case Use:
+                return true;
+            case Ignore:
+                return false;
+            default:
+                return parent;
+        }
+    }
 
 }

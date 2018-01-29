@@ -5,12 +5,12 @@
  */
 package org.master.unitoo.core.api.util;
 
-import org.master.unitoo.core.api.synthetic.IJsonObject;
+import org.master.unitoo.core.api.IBusinessObject;
 
 /**
  *
  * @author Andrey
  */
-public interface IMonitorEvent extends IJsonObject {
+public interface IMonitorEvent extends IBusinessObject {
 
 }

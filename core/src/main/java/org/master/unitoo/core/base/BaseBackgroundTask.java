@@ -12,7 +12,7 @@ import org.master.unitoo.core.api.ILogger;
 import org.master.unitoo.core.api.components.IBackgroundTask;
 import org.master.unitoo.core.types.ComponentContext;
 import org.master.unitoo.core.types.ComponentType;
-import org.master.unitoo.core.types.DateTime;
+import org.master.unitoo.core.api.synthetic.DateTime;
 import org.master.unitoo.core.types.MethodType;
 import org.master.unitoo.core.types.RunnableState;
 

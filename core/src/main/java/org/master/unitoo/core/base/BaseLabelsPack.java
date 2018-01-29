@@ -40,27 +40,17 @@ public abstract class BaseLabelsPack implements ILabelsPack {
                     field.setAccessible(true);
                     String name = field.getName();
                     String def = field.getName();
-                    boolean escape = defaults.isEscapeControllerResult();
-                    boolean trim = defaults.isTrimControllerResult();
 
                     Attribute attr = field.getAnnotation(Attribute.class);
                     if (attr != null) {
                         name = attr.name().isEmpty() ? name : attr.name();
                         def = attr.value();
-                        escape = attr.escape() == Decision.Make
-                                ? true
-                                : attr.escape() == Decision.Skip ? false : escape;
-                        trim = attr.trim() == Decision.Make
-                                ? true
-                                : attr.trim() == Decision.Skip ? false : trim;
                     }
 
                     Label label = new Label(
                             app(),
                             clazz.getName() + "." + name,
-                            def,
-                            escape,
-                            trim);
+                            def);
                     field.set(this, label);
                     labels.put(label.key(), label);
 

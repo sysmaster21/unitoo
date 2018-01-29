@@ -5,13 +5,13 @@
  */
 package org.master.unitoo.core.server;
 
-import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import org.master.unitoo.core.base.BaseFormatter;
+import org.master.unitoo.core.types.BinaryFormat;
 
 /**
  *
@@ -19,6 +19,7 @@ import org.master.unitoo.core.base.BaseFormatter;
  */
 public class BootFormatter extends BaseFormatter {
 
+    private final BinaryFormat binary = BinaryFormat.HEX;
     private final String encoding = "UTF-8";
     private final String list = "|";
     private final Character delimiter = '.';
@@ -30,8 +31,8 @@ public class BootFormatter extends BaseFormatter {
     private final String datetime = "dd/MM/yyyy HH:mm:ss";
 
     @Override
-    protected Charset createCharset() {
-        return Charset.forName(encoding);
+    protected String createCharset() {
+        return encoding;
 
     }
 
@@ -74,6 +75,11 @@ public class BootFormatter extends BaseFormatter {
     @Override
     public Setting[] settings() {
         return new Setting[0];
+    }
+
+    @Override
+    protected BinaryFormat createBinary() {
+        return binary;
     }
 
 }

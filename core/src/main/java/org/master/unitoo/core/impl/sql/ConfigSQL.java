@@ -7,18 +7,16 @@ package org.master.unitoo.core.impl.sql;
 
 import java.util.Date;
 import java.util.List;
+import org.master.sqlonfly.impl.SqlDefaultDataTable;
 import org.master.sqlonfly.interfaces.ISQLBatch;
-import org.master.unitoo.core.api.IDatabaseStorageAPI;
 import org.master.unitoo.core.errors.DatabaseException;
 
 /**
  * @connection system
  */
-public interface ConfigSQL extends ISQLBatch<ConfigSQL>, IDatabaseStorageAPI {
+public interface ConfigSQL extends ISQLBatch<ConfigSQL> {
 
-    @Override
     /**
-     *
      * {@code
      *  select
      *      count(*) as Count
@@ -39,7 +37,6 @@ public interface ConfigSQL extends ISQLBatch<ConfigSQL>, IDatabaseStorageAPI {
      */
     public Integer changedAfter(String storage, Date date) throws DatabaseException;
 
-    @Override
     /**
      *
      * {@code
@@ -58,21 +55,90 @@ public interface ConfigSQL extends ISQLBatch<ConfigSQL>, IDatabaseStorageAPI {
      *
      * @execute select
      */
-    public List<String> keys(String storage) throws DatabaseException;
+    public String[] keys(String storage) throws DatabaseException;
 
-    @Override
+    /**
+     *
+     * {@code
+     *  update config_attrs set
+     *      ConfigAttrValue = <#value#>
+     *  where
+     *      ConfigName = <#code#>
+     *      and ConfigAttrName = <#attrName#>
+     *      and ConfigStorage = <#storage#>
+     * }
+     *
+     * @param storage VARCHAR(250)
+     * @param code VARCHAR(250)
+     * @param attrName VARCHAR(250)
+     * @param value TEXT
+     *
+     * @return @@rowcount
+     * @throws org.master.unitoo.core.errors.DatabaseException
+     *
+     * @execute update
+     */
     public int setAttr(String storage, String code, String attrName, Object value) throws DatabaseException;
 
-    @Override
+    /**
+     *
+     * {@code
+     *  insert into config_attrs (ConfigName, ConfigAttrName, ConfigStorage, ConfigAttrValue)
+     *      values (<#code#>, <#attrName#>, <#storage#>, <#value#>)
+     * }
+     *
+     * @param storage VARCHAR(250)
+     * @param code VARCHAR(250)
+     * @param attrName VARCHAR(250)
+     * @param value TEXT
+     *
+     * @return @@rowcount
+     * @throws org.master.unitoo.core.errors.DatabaseException
+     *
+     * @execute update
+     */
     public int addAttr(String storage, String code, String attrName, Object value) throws DatabaseException;
 
-    @Override
+    /**
+     *
+     * {@code
+     *  update config set
+     *      ConfigValue = <#value#>,
+     *      ConfigValueChanged = NOW()
+     *  where
+     *      ConfigName = <#code#>
+     *      and ConfigStorage = <#storage#>
+     * }
+     *
+     * @param storage VARCHAR(250)
+     * @param code VARCHAR(250)
+     * @param value TEXT
+     *
+     * @return @@rowcount
+     * @throws org.master.unitoo.core.errors.DatabaseException
+     *
+     * @execute update
+     */
     public int setValue(String storage, String code, Object value) throws DatabaseException;
 
-    @Override
+    /**
+     *
+     * {@code
+     *  insert into config (ConfigName, ConfigStorage, ConfigValue, ConfigValueChanged)
+     *      values (<#code#>, <#storage#>, <#value#>, NOW())
+     * }
+     *
+     * @param storage VARCHAR(250)
+     * @param code VARCHAR(250)
+     * @param value TEXT
+     *
+     * @return @@rowcount
+     * @throws org.master.unitoo.core.errors.DatabaseException
+     *
+     * @execute update
+     */
     public int addValue(String storage, String code, Object value) throws DatabaseException;
 
-    @Override
     /**
      *
      * {@code
@@ -97,7 +163,6 @@ public interface ConfigSQL extends ISQLBatch<ConfigSQL>, IDatabaseStorageAPI {
      */
     public String getAttr(String storage, String code, String attrName) throws DatabaseException;
 
-    @Override
     /**
      *
      * {@code
@@ -118,9 +183,8 @@ public interface ConfigSQL extends ISQLBatch<ConfigSQL>, IDatabaseStorageAPI {
      *
      * @execute select
      */
-    public String getValue(String storage, String code);
+    public String getValue(String storage, String code) throws DatabaseException;
 
-    @Override
     /**
      *
      * {@code
@@ -145,7 +209,6 @@ public interface ConfigSQL extends ISQLBatch<ConfigSQL>, IDatabaseStorageAPI {
      */
     public Integer containsAttr(String storage, String code, String attrName) throws DatabaseException;
 
-    @Override
     /**
      *
      * {@code

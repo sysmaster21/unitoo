@@ -12,125 +12,75 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-import org.master.unitoo.core.UniToo;
-import org.master.unitoo.core.api.IFormatContext;
-import org.master.unitoo.core.api.annotation.Attribute;
-import org.master.unitoo.core.api.synthetic.IJsonObject;
-import org.master.unitoo.core.base.BaseFormatter;
-import org.master.unitoo.core.types.Decision;
+import org.master.unitoo.core.api.IBusinessField;
+import org.master.unitoo.core.api.IBusinessObject;
+import org.master.unitoo.core.api.IProcessSnapshot;
+import org.master.unitoo.core.api.components.IFormatter;
+import org.master.unitoo.core.api.IDataContent;
 
 /**
  *
  * @author Andrey
  */
-public class GsonJsonObjectConvertor implements JsonSerializer<IJsonObject>, JsonDeserializer<IJsonObject> {
+public class GsonJsonObjectConvertor implements JsonSerializer<IBusinessObject>, JsonDeserializer<IBusinessObject> {
 
-    private final BaseFormatter formatter;
+    private final IFormatter formatter;
+    private IDataContent content;
 
-    public GsonJsonObjectConvertor(BaseFormatter formatter) {
+    public GsonJsonObjectConvertor(IFormatter formatter) {
         this.formatter = formatter;
     }
 
+    public void content(IDataContent content) {
+        this.content = content;
+    }
+
     @Override
-    public JsonElement serialize(IJsonObject src, Type typeOfSrc, JsonSerializationContext context) {
+    public JsonElement serialize(IBusinessObject src, Type typeOfSrc, JsonSerializationContext context) {
         JsonObject object = new JsonObject();
-        for (Field field : src.getClass().getDeclaredFields()) {
-            if (!Modifier.isTransient(field.getModifiers())) {
-                field.setAccessible(true);
-
-                String name = field.getName();
-                Attribute fann = field.getAnnotation(org.master.unitoo.core.api.annotation.Attribute.class);
-                name = fann != null && !fann.name().isEmpty() ? fann.name() : name;
-
-                final boolean escape = UniToo.getEffectiveDecision(formatter.currentFormatContext().escape(), fann == null ? Decision.Parent : fann.escape());
-                final boolean trim = UniToo.getEffectiveDecision(formatter.currentFormatContext().trim(), fann == null ? Decision.Parent : fann.trim());
-                IFormatContext ctx = new IFormatContext() {
-                    @Override
-                    public boolean escape() {
-                        return escape;
-                    }
-
-                    @Override
-                    public boolean trim() {
-                        return trim;
-                    }
-                };
-
-                Object value;
-                try {
-                    value = field.get(src);
-                } catch (IllegalAccessException | IllegalArgumentException e) {
-                    value = null;
-                }
-
+        for (IBusinessField field : formatter.app().businessFields(src.getClass())) {
+            Object value = field.get(src);
+            String name = content.getAttributeName(src, field);
+            IProcessSnapshot info = content.beforeSerialize(src, field, formatter);
+            try {
                 JsonElement element;
                 if (value instanceof String) {
-                    value = formatter.format(value, ctx);
+                    value = formatter.format(value);
                     element = context.serialize(value);
-                } else if (value instanceof IJsonObject) {
-                    try {
-                        formatter.enterFormatContext(ctx);
-                        element = context.serialize(value);
-                    } finally {
-                        formatter.exitFormatContext();
-                    }
                 } else {
                     element = context.serialize(value);
                 }
-
                 object.add(name, element);
+            } finally {
+                content.afterSerialize(info);
             }
         }
         return object;
     }
 
     @Override
-    public IJsonObject deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+    public IBusinessObject deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         try {
             Class clazz = (Class) typeOfT;
-            IJsonObject object = (IJsonObject) clazz.newInstance();
+            IBusinessObject object = (IBusinessObject) clazz.newInstance();
             JsonObject jobj = json.getAsJsonObject();
-            for (Field field : clazz.getDeclaredFields()) {
-                if (!Modifier.isTransient(field.getModifiers())) {
-                    field.setAccessible(true);
+            for (IBusinessField field : formatter.app().businessFields(object.getClass())) {
+                String name = content.getAttributeName(object, field);
+                if (jobj.has(name)) {
+                    IProcessSnapshot info = content.beforeDeserialize(object, field, formatter);
 
-                    String name = field.getName();
-                    Attribute fann = field.getAnnotation(org.master.unitoo.core.api.annotation.Attribute.class);
-                    name = fann != null && !fann.name().isEmpty() ? fann.name() : name;
+                    try {
+                        Object value;
+                        value = context.deserialize(jobj.get(field.name()), field.type());
 
-                    final boolean escape = UniToo.getEffectiveDecision(formatter.currentFormatContext().escape(), fann == null ? Decision.Parent : fann.escape());
-                    final boolean trim = UniToo.getEffectiveDecision(formatter.currentFormatContext().trim(), fann == null ? Decision.Parent : fann.trim());
-                    IFormatContext ctx = new IFormatContext() {
-                        @Override
-                        public boolean escape() {
-                            return escape;
+                        if (value instanceof String) {
+                            value = formatter.format(value);
                         }
-
-                        @Override
-                        public boolean trim() {
-                            return trim;
-                        }
-                    };
-
-                    Object value;
-                    if (IJsonObject.class.isAssignableFrom(field.getType())) {
-                        try {
-                            formatter.enterFormatContext(ctx);
-                            value = context.deserialize(jobj.get(name), field.getType());
-                        } finally {
-                            formatter.exitFormatContext();
-                        }
-                    } else {
-                        value = context.deserialize(jobj.get(name), field.getType());
+                        field.set(value, object);
+                    } finally {
+                        content.afterDeserialize(info);
                     }
-
-                    if (value instanceof String) {
-                        value = formatter.format(value, ctx);
-                    }
-                    field.set(object, value);
                 }
             }
             return object;

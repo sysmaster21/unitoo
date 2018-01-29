@@ -39,5 +39,4 @@ public @interface Attribute {
     Decision escape() default Decision.Parent;
 
     Decision trim() default Decision.Parent;
-
 }

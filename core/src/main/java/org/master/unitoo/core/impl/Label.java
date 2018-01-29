@@ -17,15 +17,11 @@ public final class Label {
     private final IApplication app;
     private final String key;
     private final String def;
-    private final boolean escape;
-    private final boolean trim;
 
-    public Label(IApplication app, String key, String def, boolean escape, boolean trim) {
+    public Label(IApplication app, String key, String def) {
         this.app = app;
         this.key = key;
         this.def = def;
-        this.escape = escape;
-        this.trim = trim;
     }
 
     public String key() {
@@ -38,14 +34,6 @@ public final class Label {
 
     public String value(ILanguage language) {
         String value = language.label(key);
-        if (escape) {
-            value = org.apache.commons.text.StringEscapeUtils.escapeHtml4(value);
-        }
-
-        if (trim) {
-            value = value.trim();
-        }
-
         return value;
     }
 
@@ -57,14 +45,6 @@ public final class Label {
 
     public String def() {
         return def;
-    }
-
-    public boolean escape() {
-        return escape;
-    }
-
-    public boolean trim() {
-        return trim;
     }
 
 }
