@@ -16,12 +16,18 @@ public final class Label {
 
     private final IApplication app;
     private final String key;
+    private final String extKey;
     private final String def;
 
-    public Label(IApplication app, String key, String def) {
+    public Label(IApplication app, String key, String extKey, String def) {
         this.app = app;
         this.key = key;
         this.def = def;
+        this.extKey = extKey;
+    }
+
+    public String extKey() {
+        return extKey;
     }
 
     public String key() {
@@ -38,7 +44,7 @@ public final class Label {
     }
 
     public String value(String code) {
-        ILanguage lang = app.language(code);
+        ILanguage lang = app.component(ILanguage.class, code);
         lang = lang == null ? app.defaults().language() : lang;
         return value(lang);
     }

@@ -150,9 +150,12 @@ import org.xml.sax.SAXException;
 import org.master.unitoo.core.api.IProcess;
 import org.master.unitoo.core.api.IProcessContext;
 import org.master.unitoo.core.api.IProcessSnapshot;
-import org.master.unitoo.core.api.components.mappers.HTML_CONTENT;
-import org.master.unitoo.core.api.components.mappers.JSON_CONTENT;
-import org.master.unitoo.core.api.components.mappers.XML_CONTENT;
+import org.master.unitoo.core.api.components.ILabelsPack;
+import org.master.unitoo.core.api.components.contents.TEXT_HTML;
+import org.master.unitoo.core.api.components.contents.APPLICATION_JSON;
+import org.master.unitoo.core.api.components.contents.APPLICATION_XML;
+import org.master.unitoo.core.errors.DatabaseException;
+import org.master.unitoo.core.impl.Label;
 import org.master.unitoo.core.types.Decision;
 import org.master.unitoo.core.types.ThreadState;
 
@@ -177,10 +180,11 @@ public abstract class BaseApplication implements IApplication {
     private Timer timer;
     private SQLEngine sqlEngine;
     private final ConcurrentMap<String, IComponent> componentIndex = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, IComponent> componentInternalIndex = new ConcurrentHashMap<>();
     private final EnumMap<ComponentType, ConcurrentMap<String, IComponent>> components = new EnumMap<>(ComponentType.class);
     private final WeakHashMap<Thread, ThreadInfo> threads = new WeakHashMap();
     private final ConcurrentMap<String, IControllerMethod> mappings = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, ILanguage> languages = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Label> labels = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, BusinessFieldList> businessFields = new ConcurrentHashMap<>();
 
     protected abstract Class<? extends IGlossaryManager> glossaryManager();
@@ -197,8 +201,17 @@ public abstract class BaseApplication implements IApplication {
     }
 
     @Override
-    public ILanguage language(String code) {
-        return code == null ? null : languages.get(code);
+    public <T> T component(Class<T> iface, String name) {
+        IComponent item = componentIndex.get(name);
+        if (item == null) {
+            item = componentInternalIndex.get(name);
+        }
+
+        if (item == null && iface == ILanguage.class) {
+            item = defaults().language();
+        }
+
+        return item == null || !item.getClass().isAssignableFrom(iface) ? null : (T) item;
     }
 
     @Override
@@ -209,6 +222,9 @@ public abstract class BaseApplication implements IApplication {
     @Override
     public IComponent component(ComponentType type, String name) {
         IComponent item = componentIndex.get(name);
+        if (item == null) {
+            item = componentInternalIndex.get(name);
+        }
         return item == null || item.type() != type ? null : item;
     }
 
@@ -234,11 +250,6 @@ public abstract class BaseApplication implements IApplication {
                         for (Class iface : ((IInterfacedComponent) component).interfaces()) {
                             componentIndex.put(iface.getName(), component);
                         }
-                    }
-
-                    if (component instanceof ILanguage) {
-                        ILanguage lang = (ILanguage) component;
-                        languages.put(lang.code(), lang);
                     }
 
                     ComponentContext ctxComponent = createComponentContext(clazz);
@@ -296,9 +307,9 @@ public abstract class BaseApplication implements IApplication {
         defaults = new ApplicationDefaults(this);
         defaults.setFormatter(SystemFormatter.class);
         defaults.setErrorHandler(SystemErrorHandler.class);
-        defaults.addContent(HTML_CONTENT.class);
-        defaults.addContent(JSON_CONTENT.class);
-        defaults.addContent(XML_CONTENT.class);
+        defaults.addContent(TEXT_HTML.class);
+        defaults.addContent(APPLICATION_JSON.class);
+        defaults.addContent(APPLICATION_XML.class);
         sysPack = component(SysSettings.class);
 
     }
@@ -307,31 +318,32 @@ public abstract class BaseApplication implements IApplication {
         Component annComponent = (Component) clazz.getAnnotation(Component.class);
         Logger annLogger = (Logger) clazz.getAnnotation(Logger.class);
 
-        String descr;
-        String url = null;
+        String internal = "";
+        String author = null;
         String version = null;
         String info;
         Class<? extends ILoggerFactory> logger = null;
 
         if (annComponent != null) {
-            url = annComponent.url();
-            descr = annComponent.value();
+            author = annComponent.author();
             version = annComponent.version();
-            info = annComponent.info();
+            info = annComponent.value();
+            internal = annComponent.internal();
         } else {
-            descr = clazz.getSimpleName();
             info = clazz.getName();
         }
+
+        internal = internal.isEmpty() ? clazz.getSimpleName() : internal;
 
         if (annLogger != null) {
             logger = annLogger.value() == BaseLogger.class ? null : annLogger.value();
         }
 
         ComponentContext ctxComponent = new ComponentContext(
-                descr,
+                author,
                 version,
                 info,
-                url,
+                internal,
                 this,
                 settings,
                 logger,
@@ -453,6 +465,22 @@ public abstract class BaseApplication implements IApplication {
             }
         }
         return v;
+    }
+
+    @Override
+    public Label label(String key) {
+        return labels.get(key);
+    }
+
+    @Override
+    public Iterable<Label> labels() {
+        return labels.values();
+    }
+
+    private void registerLabels(ILabelsPack labelsPack) {
+        for (Label label : labelsPack.labels()) {
+            labels.put(label.key(), label);
+        }
     }
 
     private void initDefaultServlet() {
@@ -656,6 +684,10 @@ public abstract class BaseApplication implements IApplication {
                     if (component.type().getBootOrder() == UniToo.BOOT_PRIORITY_INIT) {
                         ((ICustomizedComponent) component).prepare();
 
+                        if (component instanceof ILabelsPack) {
+                            registerLabels((ILabelsPack) component);
+                        }
+
                         if (component instanceof IRunnableComponent) {
                             IRunnableComponent rc = (IRunnableComponent) component;
 
@@ -694,7 +726,7 @@ public abstract class BaseApplication implements IApplication {
         I18nManager i18nManager = component(i18nClass);
         log().info("");
         log().info("\tloading languages, using: " + i18nClass.getName());
-        for (ILanguage language : languages.values()) {
+        for (ILanguage language : components(ILanguage.class)) {
             log().info("\t\t" + language.code());
             language.init(i18nManager);
         }
@@ -705,8 +737,8 @@ public abstract class BaseApplication implements IApplication {
         log().info("");
         log().info("\tinitializing stored glossaries, using: " + glossaryManagerClass.getName() + "...");
         int gl = 0;
-        Iterable<IGlossary> glossaries = components(IGlossary.class);
-        for (IGlossary glossary : glossaries) {
+        Iterable<IGlossary> glList = components(IGlossary.class);
+        for (IGlossary glossary : glList) {
             if (glossary instanceof IStoredGlossary) {
                 ((IStoredGlossary) glossary).init(glossaryManager);
                 gl++;
@@ -748,6 +780,9 @@ public abstract class BaseApplication implements IApplication {
                 scanComponentAfter(component, component.getClass());
                 if (component.boot().success()) {
                     component.prepare();
+                    if (component instanceof ILabelsPack) {
+                        registerLabels((ILabelsPack) component);
+                    }
                     if (component instanceof IRunnableComponent) {
                         log().info("\t\tstarting...");
                         ((IRunnableComponent) component).start();
@@ -783,11 +818,6 @@ public abstract class BaseApplication implements IApplication {
         }
 
         initDefaultServlet();
-    }
-
-    @Override
-    public Iterable<ILanguage> languages() {
-        return languages.values();
     }
 
     @Override
@@ -906,15 +936,15 @@ public abstract class BaseApplication implements IApplication {
     }
 
     @Override
-    public <T extends IComponent> Iterable<T> components(Class<T> clazz) {
-        if (IComponent.class == clazz) {
+    public <T extends IComponent> Iterable<T> components(Class<T> iface) {
+        if (IComponent.class == iface) {
             ArrayList<IComponent> items = new ArrayList<>();
             for (ComponentType type : ComponentType.values()) {
                 items.addAll(components.get(type).values());
             }
             return (Iterable<T>) items;
         } else {
-            ComponentType type = ComponentType.valueOf(clazz);
+            ComponentType type = ComponentType.valueOf(iface);
             if (type == null) {
                 return null;
             } else {
@@ -1392,6 +1422,24 @@ public abstract class BaseApplication implements IApplication {
         return list;
     }
 
+    @Override
+    public void map(IBusinessObject dest, ISQLDataTable source) throws UnitooException {
+        try {
+            map(dest, source.row());
+        } catch (SQLException e) {
+            throw new DatabaseException(e);
+        }
+    }
+
+    @Override
+    public void map(IBusinessObject dest, Map<String, Object> source) throws UnitooException {
+        for (IBusinessField field : businessFields(dest.getClass())) {
+            if (source.containsKey(field.name())) {
+                field.set(convert(source.get(field.name()), field.itemType()), dest);
+            }
+        }
+    }
+
     private static class BusinessFieldList extends ArrayList<IBusinessField> {
 
         private final IApplication app;
@@ -1440,8 +1488,8 @@ public abstract class BaseApplication implements IApplication {
             Type t = field.getGenericType();
             if (t instanceof ParameterizedType) {
                 if (Map.class.isAssignableFrom(field.getType())) {
-                    valueClass = (Class) ((ParameterizedType) t).getActualTypeArguments()[0];
-                    keyClass = (Class) ((ParameterizedType) t).getActualTypeArguments()[1];
+                    keyClass = (Class) ((ParameterizedType) t).getActualTypeArguments()[0];
+                    valueClass = (Class) ((ParameterizedType) t).getActualTypeArguments()[1];
                 } else {
                     keyClass = null;
                     valueClass = (Class) ((ParameterizedType) t).getActualTypeArguments()[0];
@@ -1841,7 +1889,7 @@ public abstract class BaseApplication implements IApplication {
                 }
 
                 if (method != null) {
-                    log.info(type.name() + " " + mapping + " from " + ip + " to " + method.controller().name() + "." + method.name() + "()");
+                    log.info(type.name() + " " + mapping + " from " + ip + " to " + method.name() + "()");
                     formatter = method.getOutFormat();
                     method.process(type, ip, req, resp, log);
                 } else {

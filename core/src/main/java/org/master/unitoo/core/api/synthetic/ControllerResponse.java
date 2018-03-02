@@ -68,7 +68,7 @@ public class ControllerResponse<T> implements IResponse<T> {
     }
 
     @Override
-    public IDataContent content() {
+    public IDataContent getContent() {
         return content;
     }
 
@@ -84,7 +84,7 @@ public class ControllerResponse<T> implements IResponse<T> {
     }
 
     @Override
-    public Iterable<Cookie> cookies() {
+    public Iterable<Cookie> getCookies() {
         return cookies;
     }
 
@@ -93,7 +93,7 @@ public class ControllerResponse<T> implements IResponse<T> {
     }
 
     @Override
-    public T body() {
+    public T getBody() {
         return body;
     }
 

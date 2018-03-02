@@ -8,7 +8,6 @@ package org.master.unitoo.core.base;
 import java.lang.reflect.Field;
 import java.util.concurrent.ConcurrentHashMap;
 import org.master.unitoo.core.api.IApplication;
-import org.master.unitoo.core.api.IApplicationDefaults;
 import org.master.unitoo.core.api.IBootInfo;
 import org.master.unitoo.core.api.annotation.Attribute;
 import org.master.unitoo.core.api.components.ILabelsPack;
@@ -16,7 +15,6 @@ import org.master.unitoo.core.api.components.ILanguage;
 import org.master.unitoo.core.impl.Label;
 import org.master.unitoo.core.types.ComponentContext;
 import org.master.unitoo.core.types.ComponentType;
-import org.master.unitoo.core.types.Decision;
 
 /**
  *
@@ -32,29 +30,30 @@ public abstract class BaseLabelsPack implements ILabelsPack {
             scan(clazz.getSuperclass());
         }
 
-        IApplicationDefaults defaults = app().defaults();
-
         for (Field field : clazz.getDeclaredFields()) {
             try {
                 if (field.getType() == Label.class) {
                     field.setAccessible(true);
                     String name = field.getName();
+                    String extKey = name;
                     String def = field.getName();
 
                     Attribute attr = field.getAnnotation(Attribute.class);
                     if (attr != null) {
                         name = attr.name().isEmpty() ? name : attr.name();
+                        extKey = name;
                         def = attr.value();
                     }
 
                     Label label = new Label(
                             app(),
                             clazz.getName() + "." + name,
+                            extKey,
                             def);
                     field.set(this, label);
                     labels.put(label.key(), label);
 
-                    for (ILanguage language : app().languages()) {
+                    for (ILanguage language : app().components(ILanguage.class)) {
                         language.register(label);
                     }
 
@@ -100,13 +99,18 @@ public abstract class BaseLabelsPack implements ILabelsPack {
     }
 
     @Override
+    public String internal() {
+        return context.internal();
+    }
+
+    @Override
     public IApplication app() {
         return context.application();
     }
 
     @Override
     public String info() {
-        return context.info();
+        return context.description();
     }
 
     @Override
@@ -118,4 +122,5 @@ public abstract class BaseLabelsPack implements ILabelsPack {
     public IBootInfo boot() {
         return context.boot();
     }
+
 }

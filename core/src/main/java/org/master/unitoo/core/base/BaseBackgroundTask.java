@@ -60,6 +60,11 @@ public abstract class BaseBackgroundTask implements IBackgroundTask {
     }
 
     @Override
+    public String internal() {
+        return context.internal();
+    }
+
+    @Override
     public String description() {
         return context.description();
     }
@@ -79,7 +84,7 @@ public abstract class BaseBackgroundTask implements IBackgroundTask {
 
     @Override
     public String info() {
-        return context.info();
+        return context.description();
     }
 
     @Override

@@ -29,7 +29,9 @@ public class ApplicationDefaults implements IApplicationDefaults {
     private boolean trimControllerResult = true;
     private boolean trimExternalParams = true;
     private boolean trimExternalResult = true;
-    private Map<String, IDataContent> defContent = new ConcurrentHashMap<>();
+    private boolean strictMime = false;
+    private final Map<String, IDataContent> defContent = new ConcurrentHashMap<>();
+    private final Map<String, String> defHeaders = new ConcurrentHashMap<>();
     private IFormatter defFormat;
     private IErrorHandler defHandler;
     private ILanguage defLanguage;
@@ -112,6 +114,15 @@ public class ApplicationDefaults implements IApplicationDefaults {
     }
 
     @Override
+    public boolean isStrictMime() {
+        return strictMime;
+    }
+
+    public void setStrictMime(boolean strictMime) {
+        this.strictMime = strictMime;
+    }
+
+    @Override
     public IDataContent content(String mime) {
         if (mime == null || mime.isEmpty()) {
             return defContent.get(ContentType.TEXT_HTML.getMimeType());
@@ -124,6 +135,15 @@ public class ApplicationDefaults implements IApplicationDefaults {
     public void addContent(Class<? extends IDataContent> defContent) {
         IDataContent content = app.component(defContent);
         this.defContent.put(content.contentType("UTF-8").getMimeType(), content);
+    }
+
+    public void addHeader(String name, String value) {
+        this.defHeaders.put(name, value);
+    }
+
+    @Override
+    public Map<String, String> headers() {
+        return defHeaders;
     }
 
     @Override

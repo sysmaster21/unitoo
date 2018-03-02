@@ -55,7 +55,7 @@ public class BaseService implements IService {
 
     @Override
     public String info() {
-        return context.info();
+        return context.description();
     }
 
     @Override
@@ -118,6 +118,11 @@ public class BaseService implements IService {
     }
 
     @Override
+    public String internal() {
+        return context.internal();
+    }
+
+    @Override
     public IApplication app() {
         return context.application();
     }
@@ -144,7 +149,7 @@ public class BaseService implements IService {
 
         if (IInterfacedComponent.class.isAssignableFrom(clazz)) {
             for (Class iface : clazz.getInterfaces()) {
-                if (IInterfacedComponent.class.isAssignableFrom(iface)) {
+                if (IInterfacedComponent.class.isAssignableFrom(iface) && iface != IService.class) {
                     interfaces.add(iface);
                 }
             }

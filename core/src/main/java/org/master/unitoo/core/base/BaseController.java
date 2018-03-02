@@ -70,6 +70,12 @@ import org.master.unitoo.core.api.IProcessSnapshot;
 import org.master.unitoo.core.api.IResponse;
 import org.master.unitoo.core.types.Decision;
 import org.master.unitoo.core.api.IDataContent;
+import org.master.unitoo.core.api.annotation.HTTP;
+import org.master.unitoo.core.api.annotation.Default;
+import org.master.unitoo.core.api.synthetic.RequestData;
+import org.master.unitoo.core.api.util.IUser;
+import org.master.unitoo.core.errors.InvalidSession;
+import org.master.unitoo.core.errors.MethodFailed;
 
 /**
  *
@@ -84,6 +90,21 @@ public abstract class BaseController implements IController {
     private volatile RunnableState state = RunnableState.Stopped;
     private final AtomicInteger runCount = new AtomicInteger(0);
     private long stopFrom = 0;
+
+    private Class<? extends IErrorHandler> errHandler = IErrorHandler.class;
+    private Class<? extends IDataContent> requestContent = IDataContent.class;
+    private Decision strictMime = Decision.Parent;
+    private RequestMethod requestMethod = RequestMethod.DEFAULT;
+
+    private Class<? extends IFormatter> paramsFormat = IFormatter.class;
+    private Class<? extends IDataContent> paramsContent = IDataContent.class;
+    private Decision paramsEscape = Decision.Parent;
+    private Decision paramsTrim = Decision.Parent;
+
+    private Class<? extends IFormatter> responseFormat = IFormatter.class;
+    private Class<? extends IDataContent> responseContent = IDataContent.class;
+    private Decision responseEscape = Decision.Parent;
+    private Decision responseTrim = Decision.Parent;
 
     protected MethodType getMethodsTypes() {
         return MethodType.API;
@@ -109,7 +130,7 @@ public abstract class BaseController implements IController {
 
     @Override
     public String info() {
-        return context.info();
+        return context.description();
     }
 
     @Override
@@ -121,9 +142,151 @@ public abstract class BaseController implements IController {
     public void init(ComponentContext context) {
         state = RunnableState.Init;
         this.context = context;
-        this.base = context.url() == null || context.url().trim().isEmpty() ? "/" : context.url().trim();
-        this.base = this.base.endsWith("/") ? this.base : this.base + "/";
-        this.base = this.base.startsWith("/") ? this.base : "/" + this.base;
+
+        HTTP settings = getClass().getAnnotation(HTTP.class);
+        if (settings != null) {
+            this.base = settings.url() == null || settings.url().trim().isEmpty() ? "/" : settings.url().trim();
+            this.base = this.base.endsWith("/") ? this.base : this.base + "/";
+            this.base = this.base.startsWith("/") ? this.base : "/" + this.base;
+
+            errHandler = settings.errors();
+            requestContent = settings.request();
+            strictMime = settings.strictMime();
+            requestMethod = settings.method();
+
+            Default fmt = settings.params();
+            if (fmt != null) {
+                paramsFormat = fmt.format();
+                paramsContent = fmt.content();
+                paramsEscape = fmt.escape();
+                paramsTrim = fmt.trim();
+            }
+
+            fmt = settings.response();
+            if (fmt != null) {
+                responseFormat = fmt.format();
+                responseContent = fmt.content();
+                responseEscape = fmt.escape();
+                responseTrim = fmt.trim();
+            }
+        } else {
+            this.base = "/";
+        }
+    }
+
+    private RequestMethod[] methodTypes(RequestMethod[] items) {
+        if (items == null || items.length == 0 || (items.length == 1 && items[0] == RequestMethod.DEFAULT)) {
+            if (requestMethod == RequestMethod.DEFAULT) {
+                return new RequestMethod[]{RequestMethod.GET, RequestMethod.POST};
+            } else {
+                return new RequestMethod[]{requestMethod};
+            }
+        } else {
+            return items;
+        }
+    }
+
+    private IErrorHandler getErrHandler() {
+        if (IErrorHandler.class == errHandler) {
+            return app().defaults().errorHandler();
+        } else {
+            return app().component(errHandler);
+        }
+    }
+
+    private IFormatter getParamsFormat() {
+        if (IFormatter.class == paramsFormat) {
+            return app().defaults().formatter();
+        } else {
+            return app().component(paramsFormat);
+        }
+    }
+
+    private IFormatter getResponseFormat() {
+        if (IFormatter.class == responseFormat) {
+            return app().defaults().formatter();
+        } else {
+            return app().component(responseFormat);
+        }
+    }
+
+    private Class<? extends IDataContent> getRequestContent(Class<? extends IDataContent> paramsContent) {
+        if (IDataContent.class == paramsContent) {
+            return requestContent;
+        } else {
+            return paramsContent;
+        }
+    }
+
+    private IDataContent getParamsContent(String mime) {
+        if (IDataContent.class == paramsContent) {
+            return app().defaults().content(mime);
+        } else {
+            return app().component(paramsContent);
+        }
+    }
+
+    private IDataContent getResponseContent(String mime) {
+        if (IDataContent.class == responseContent) {
+            return app().defaults().content(mime);
+        } else {
+            return app().component(responseContent);
+        }
+    }
+
+    private boolean getStrictMime() {
+        switch (strictMime) {
+            case Use:
+                return true;
+            case Ignore:
+                return false;
+            default:
+                return app().defaults().isStrictMime();
+        }
+    }
+
+    private boolean getParamsEscape() {
+        switch (paramsEscape) {
+            case Use:
+                return true;
+            case Ignore:
+                return false;
+            default:
+                return app().defaults().isEscapeControllerParams();
+        }
+    }
+
+    private boolean getResponseEscape() {
+        switch (responseEscape) {
+            case Use:
+                return true;
+            case Ignore:
+                return false;
+            default:
+                return app().defaults().isEscapeControllerResult();
+        }
+    }
+
+    private boolean getParamsTrim() {
+        switch (paramsTrim) {
+            case Use:
+                return true;
+            case Ignore:
+                return false;
+            default:
+                return app().defaults().isTrimControllerParams();
+        }
+    }
+
+    private boolean getResponseTrim() {
+        switch (responseTrim) {
+            case Use:
+                return true;
+            case Ignore:
+                return false;
+            default:
+                return app().defaults().isTrimControllerResult();
+        }
     }
 
     @Override
@@ -184,6 +347,11 @@ public abstract class BaseController implements IController {
     }
 
     @Override
+    public String internal() {
+        return context.internal();
+    }
+
+    @Override
     public IApplication app() {
         return context.application();
     }
@@ -217,6 +385,14 @@ public abstract class BaseController implements IController {
         app().process().methodLive(info);
     }
 
+    protected IUser user() throws InvalidSession {
+        IUser user = app().process().session().user();
+        if (user == null) {
+            throw new InvalidSession();
+        }
+        return user;
+    }
+
     private static class ControllerMethod implements IControllerMethod {
 
         private final String mapping;
@@ -226,14 +402,14 @@ public abstract class BaseController implements IController {
         private final boolean inTrim;
         private final EnumMap<RequestMethod, RequestMethod> types = new EnumMap<>(RequestMethod.class);
         private final Class<? extends IErrorHandler> errorHanlerClass;
-        private final Class<? extends IFormatter> inFormatClass;
-        private IFormatter inFormatter;
-        private final Class<? extends IFormatter> outFormatClass;
-        private IFormatter outFormatter;
-        private final Class<? extends IDataContent> inContentClass;
-        private IDataContent inContent;
-        private final Class<? extends IDataContent> outContentClass;
-        private IDataContent outContent;
+        private final Class<? extends IFormatter> paramsFormatClass;
+        private IFormatter paramsFormatter;
+        private final Class<? extends IFormatter> responseFormatClass;
+        private IFormatter responseFormatter;
+        private final Class<? extends IDataContent> paramsContentClass;
+        private IDataContent paramsContent;
+        private final Class<? extends IDataContent> responseContentClass;
+        private IDataContent responseContent;
         private final Method method;
         private final BaseController parent;
         private IErrorHandler errorHandler;
@@ -253,18 +429,19 @@ public abstract class BaseController implements IController {
             this.errorHanlerClass = rqMapping.errors();
             this.parent = parent;
             this.method = method;
-            this.inFormatClass = rqMapping.format();
-            this.outFormatClass = rsMapping == null ? IFormatter.class : rsMapping.format();
+            this.paramsFormatClass = rqMapping.format();
+            this.responseFormatClass = rsMapping == null ? IFormatter.class : rsMapping.format();
             this.secureLevel = rqMapping.secure();
-            this.inContentClass = rqMapping.content();
-            this.mimeStrict = rqMapping.strictContent();
-            this.outContentClass = rsMapping == null || rsMapping.content().length == 0 ? IDataContent.class : rsMapping.content()[0];
-            this.outEscape = Decision.Get(parent.app().defaults().isEscapeControllerResult(), rsMapping == null ? null : rsMapping.escape());
-            this.outTrim = Decision.Get(parent.app().defaults().isTrimControllerResult(), rsMapping == null ? null : rsMapping.trim());
-            this.inEscape = Decision.Get(parent.app().defaults().isEscapeControllerParams(), rqMapping.escape());
-            this.inTrim = Decision.Get(parent.app().defaults().isTrimControllerParams(), rqMapping.trim());
+            this.paramsContentClass = parent.getRequestContent(rqMapping.content());
+            this.mimeStrict = Decision.Get(parent.getStrictMime(), rqMapping.strictContent());
+            this.responseContentClass = rsMapping == null || rsMapping.content().length == 0 ? IDataContent.class : rsMapping.content()[0];
+            this.outEscape = Decision.Get(parent.getResponseEscape(), rsMapping == null ? null : rsMapping.escape());
+            this.outTrim = Decision.Get(parent.getResponseTrim(), rsMapping == null ? null : rsMapping.trim());
+            this.inEscape = Decision.Get(parent.getParamsEscape(), rqMapping.escape());
+            this.inTrim = Decision.Get(parent.getParamsTrim(), rqMapping.trim());
 
-            for (RequestMethod item : rqMapping.type()) {
+            RequestMethod[] mTypes = parent.methodTypes(rqMapping.type());
+            for (RequestMethod item : mTypes) {
                 this.types.put(item, item);
             }
 
@@ -279,7 +456,7 @@ public abstract class BaseController implements IController {
         private IErrorHandler getErrorHandler() {
             if (errorHandler == null) {
                 if (errorHanlerClass == IErrorHandler.class) {
-                    errorHandler = parent.app().defaults().errorHandler();
+                    errorHandler = parent.getErrHandler();
                 } else {
                     errorHandler = parent.app().component(errorHanlerClass);
                 }
@@ -288,48 +465,48 @@ public abstract class BaseController implements IController {
         }
 
         private IFormatter getInFormatter() {
-            if (inFormatter == null) {
-                if (inFormatClass == IFormatter.class) {
-                    inFormatter = parent.app().defaults().formatter();
+            if (paramsFormatter == null) {
+                if (paramsFormatClass == IFormatter.class) {
+                    paramsFormatter = parent.getParamsFormat();
                 } else {
-                    inFormatter = parent.app().component(inFormatClass);
+                    paramsFormatter = parent.app().component(paramsFormatClass);
                 }
             }
-            return inFormatter;
+            return paramsFormatter;
         }
 
         @Override
         public IFormatter getOutFormat() {
-            if (outFormatter == null) {
-                if (outFormatClass == IFormatter.class) {
-                    outFormatter = parent.app().defaults().formatter();
+            if (responseFormatter == null) {
+                if (responseFormatClass == IFormatter.class) {
+                    responseFormatter = parent.getResponseFormat();
                 } else {
-                    outFormatter = parent.app().component(outFormatClass);
+                    responseFormatter = parent.app().component(responseFormatClass);
                 }
             }
-            return outFormatter;
+            return responseFormatter;
         }
 
         private IDataContent getInContent(String mime) {
-            if (inContent == null) {
-                if (inContentClass == IDataContent.class) {
-                    return parent.app().defaults().content(mime);
+            if (paramsContent == null) {
+                if (paramsContentClass == IDataContent.class) {
+                    return parent.getParamsContent(mime);
                 } else {
-                    inContent = parent.app().component(inContentClass);
+                    paramsContent = parent.app().component(paramsContentClass);
                 }
             }
-            return inContent;
+            return paramsContent;
         }
 
         private IDataContent getOutContent() {
-            if (outContent == null) {
-                if (outContentClass == IDataContent.class) {
-                    outContent = parent.app().defaults().content(null);
+            if (responseContent == null) {
+                if (responseContentClass == IDataContent.class) {
+                    responseContent = parent.getResponseContent(null);
                 } else {
-                    outContent = parent.app().component(outContentClass);
+                    responseContent = parent.app().component(responseContentClass);
                 }
             }
-            return outContent;
+            return responseContent;
         }
 
         private String extractFileName(HttpServletRequest req) {
@@ -354,15 +531,15 @@ public abstract class BaseController implements IController {
                         ? ContentType.TEXT_HTML
                         : ContentType.parse(req.getContentType());
 
-                if (mimeStrict && inContentClass != IDataContent.class) {
-                    if (!getInContent(null).contentType("UTF-8").getMimeType().equals(contentType.getMimeType())) {
-                        throw new InvalidContentType(contentType.getMimeType());
-                    }
-                }
-
                 IProcessSnapshot snapshot = parent.app().process().context().save();
 
                 try {
+                    if (mimeStrict && paramsContentClass != IDataContent.class) {
+                        if (!getInContent(null).contentType("UTF-8").getMimeType().equals(contentType.getMimeType())) {
+                            throw new InvalidContentType(contentType.getMimeType());
+                        }
+                    }
+
                     if (types.containsKey(type)) {
 
                         log.debug("Secure level: " + secureLevel.name());
@@ -446,6 +623,9 @@ public abstract class BaseController implements IController {
                                             req.getLocalAddr(),
                                             req.getLocalPort());
                                     args[i] = param.isArray() ? new RequestAddress[]{addr} : addr;
+                                } else if (RequestData.class.isAssignableFrom(param.type())) {
+                                    RequestData data = new RequestData(req, parent.app());
+                                    args[i] = param.isArray() ? new RequestData[]{data} : data;
                                 } else {
                                     values.clear();
                                     direct.clear();
@@ -566,6 +746,8 @@ public abstract class BaseController implements IController {
 
                             Object obj = method.invoke(parent, args);
 
+                            doDefaults(httpResponse);
+
                             parent.app().process().context()
                                     .escape(outEscape)
                                     .trim(outTrim);
@@ -583,10 +765,10 @@ public abstract class BaseController implements IController {
                                         }
                                     }
 
-                                    for (Cookie cookie : response.cookies()) {
+                                    for (Cookie cookie : response.getCookies()) {
                                         httpResponse.addCookie(cookie);
                                     }
-                                    flush(httpResponse, response.body(), log, response.content());
+                                    flush(httpResponse, response.getBody(), log, response.getContent());
                                 } else {
                                     flush(httpResponse, obj, log, null);
                                 }
@@ -620,6 +802,11 @@ public abstract class BaseController implements IController {
                     } else {
                         throw new MethodNotAllowed(type.name(), mapping);
                     }
+                } catch (Throwable t) {
+                    Throwable error = new MethodFailed(name(), t);
+                    log.error(error);
+                    doDefaults(httpResponse);
+                    parent.app().defaults().errorHandler().flush(this, mapping, httpResponse, getOutFormat(), t);
                 } finally {
                     parent.app().process().context().restore(snapshot);
                     parent.runCount.decrementAndGet();
@@ -630,19 +817,29 @@ public abstract class BaseController implements IController {
             }
         }
 
-        private Object processParamValue(RequestParameter param, String value, ContentType contentType) throws Exception {
-            Object result;
-            if (IBusinessObject.class.isAssignableFrom(param.type())) {
-                result = value == null
-                        ? null
-                        : param.formats().content(getInContent(contentType.getMimeType())).deserialize(
-                                param.type(),
-                                new ByteArrayInputStream(value.getBytes(param.formats().format(getInFormatter()).encoding())),
-                                param.formats().format(getInFormatter()));
-            } else {
-                result = parent.app().parse(getInFormatter(), value, param.type());
+        private void doDefaults(HttpServletResponse httpResponse) {
+            for (Map.Entry<String, String> entry : parent.app().defaults().headers().entrySet()) {
+                httpResponse.addHeader(entry.getKey(), entry.getValue());
             }
-            return validate(result, param);
+        }
+
+        private Object processParamValue(RequestParameter param, String value, ContentType contentType) throws Exception {
+            try {
+                Object result;
+                if (IBusinessObject.class.isAssignableFrom(param.type())) {
+                    result = value == null
+                            ? null
+                            : param.formats().content(getInContent(contentType.getMimeType())).deserialize(
+                                    param.type(),
+                                    new ByteArrayInputStream(value.getBytes(param.formats().format(getInFormatter()).encoding())),
+                                    param.formats().format(getInFormatter()));
+                } else {
+                    result = parent.app().parse(getInFormatter(), value, param.type());
+                }
+                return validate(result, param);
+            } catch (IOException e) {
+                throw new ParameterInvalidException(param.name(), e);
+            }
         }
 
         private int available(InputStream stream) {
@@ -718,7 +915,7 @@ public abstract class BaseController implements IController {
 
         @Override
         public String name() {
-            return method.getName();
+            return parent.name() + "." + method.getName();
         }
 
         @Override

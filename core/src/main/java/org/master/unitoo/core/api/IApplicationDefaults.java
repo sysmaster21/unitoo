@@ -5,6 +5,7 @@
  */
 package org.master.unitoo.core.api;
 
+import java.util.Map;
 import org.master.unitoo.core.api.components.IErrorHandler;
 import org.master.unitoo.core.api.components.IFormatter;
 import org.master.unitoo.core.api.components.ILanguage;
@@ -31,7 +32,11 @@ public interface IApplicationDefaults {
 
     boolean isTrimExternalResult();
 
+    boolean isStrictMime();
+
     IDataContent content(String mime);
+
+    Map<String, String> headers();
 
     IFormatter formatter();
 

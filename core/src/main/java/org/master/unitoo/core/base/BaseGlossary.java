@@ -61,13 +61,18 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
     }
 
     @Override
+    public String internal() {
+        return context.internal();
+    }
+
+    @Override
     public IApplication app() {
         return context.application();
     }
 
     @Override
     public String info() {
-        return context.info();
+        return context.description();
     }
 
     @Override
@@ -101,9 +106,9 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
                 }
             });
 
-            for (ILanguage language : app().languages()) {
+            for (ILanguage language : app().components(ILanguage.class)) {
                 for (T item : cache.values()) {
-                    Label label = new Label(app(), name() + "." + item.code(), item.defLabel());
+                    Label label = new Label(app(), name() + "." + item.code(), name(), item.defLabel());
                     language.register(label);
                 }
                 try {

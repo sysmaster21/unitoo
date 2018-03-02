@@ -49,4 +49,9 @@ public enum Month implements ICodedEnum<String> {
         return String.class;
     }
 
+    @Override
+    public boolean is(String code) {
+        return code != null && code.equals(this.code);
+    }
+
 }

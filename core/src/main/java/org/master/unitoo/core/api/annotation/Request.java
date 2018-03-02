@@ -27,15 +27,14 @@ public @interface Request {
     String value() default "";
 
     RequestMethod[] type() default {
-        RequestMethod.GET,
-        RequestMethod.POST
+        RequestMethod.DEFAULT,
     };
 
     Class<? extends IErrorHandler> errors() default IErrorHandler.class;
 
     SecureLevel secure() default SecureLevel.None;
-    
-    boolean strictContent() default false;
+
+    Decision strictContent() default Decision.Parent;
 
     //-------------------------------------------------------------------------- Format (global)
     Class<? extends IFormatter> format() default IFormatter.class;

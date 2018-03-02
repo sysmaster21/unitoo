@@ -11,7 +11,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.master.unitoo.core.api.IControllerMethod;
 import org.master.unitoo.core.api.annotation.Component;
 import org.master.unitoo.core.api.components.IFormatter;
-import org.master.unitoo.core.api.components.mappers.HTML_CONTENT;
+import org.master.unitoo.core.api.components.contents.TEXT_HTML;
 import org.master.unitoo.core.base.BaseErrorHandler;
 import org.master.unitoo.core.errors.MethodNotAllowed;
 import org.master.unitoo.core.errors.MethodNotFound;
@@ -41,7 +41,7 @@ public class SystemErrorHandler extends BaseErrorHandler {
 
     @Override
     protected IDataContent content() {
-        return app().component(HTML_CONTENT.class);
+        return app().component(TEXT_HTML.class);
     }
 
 }

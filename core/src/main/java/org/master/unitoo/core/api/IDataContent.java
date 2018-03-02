@@ -16,6 +16,8 @@ import org.master.unitoo.core.api.components.IFormatter;
  * @author Andrey
  */
 public interface IDataContent extends IComponent {
+    
+    boolean inParamsUsage();
 
     String getRootName();
 

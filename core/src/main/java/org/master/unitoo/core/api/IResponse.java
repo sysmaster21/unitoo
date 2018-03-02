@@ -22,10 +22,10 @@ public interface IResponse<T> {
 
     Map<String, List<String>> getHeaders();
 
-    IDataContent content();
+    IDataContent getContent();
 
-    Iterable<Cookie> cookies();
+    Iterable<Cookie> getCookies();
 
-    T body();
+    T getBody();
 
 }

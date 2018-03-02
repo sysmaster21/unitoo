@@ -33,6 +33,10 @@ public enum CRUD implements ICodedEnum<String> {
     public Class<String> type() {
         return String.class;
     }
-;
+
+    @Override
+    public boolean is(String code) {
+        return code != null && code.equals(this.code);
+    }
 
 }

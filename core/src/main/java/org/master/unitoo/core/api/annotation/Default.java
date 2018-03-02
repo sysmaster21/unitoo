@@ -9,21 +9,23 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.master.unitoo.core.api.components.IFormatter;
+import org.master.unitoo.core.types.Decision;
+import org.master.unitoo.core.api.IDataContent;
 
 /**
- * F
  *
  * @author Andrey
  */
-@Target({ElementType.TYPE})
+@Target({ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Component {
+public @interface Default {
 
-    String author() default "";
+    Class<? extends IFormatter> format() default IFormatter.class;
 
-    String version() default "";
+    Class<? extends IDataContent> content() default IDataContent.class;
 
-    String value() default ""; //information
-    
-    String internal() default "";
+    Decision escape() default Decision.Parent;
+
+    Decision trim() default Decision.Parent;
 }

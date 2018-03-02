@@ -98,8 +98,13 @@ public abstract class BaseDataContent implements IDataContent {
     }
 
     @Override
+    public String internal() {
+        return context.internal();
+    }
+
+    @Override
     public String info() {
-        return context.info();
+        return context.description();
     }
 
     @Override

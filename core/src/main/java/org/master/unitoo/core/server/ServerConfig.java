@@ -14,6 +14,8 @@ import org.master.unitoo.core.errors.UnitooException;
 import org.master.unitoo.core.api.IChangeListener;
 import org.master.unitoo.core.api.IExternalStorage;
 import org.master.unitoo.core.api.IFlushable;
+import org.master.unitoo.core.errors.AttributeSetException;
+import org.master.unitoo.core.errors.TypeConvertExpection;
 
 /**
  *
@@ -94,7 +96,11 @@ public class ServerConfig extends ConcurrentHashMap<String, Setting> implements 
             for (Setting setting : values()) {
                 if (storage.hasValue(setting.name(), null, String.class)) {
                     if (!setting.isChanged() || first) {
-                        setting.val(app.convert(storage.getValue(setting.name(), null, String.class), setting.type()));
+                        try {
+                            setting.val(app.convert(storage.getValue(setting.name(), null, String.class), setting.type()));
+                        } catch (TypeConvertExpection e) {
+                            throw new AttributeSetException(setting.name(), e);
+                        }
                     }
                 } else {
                     storage.putValue(setting.name(), setting.val(), null, String.class);

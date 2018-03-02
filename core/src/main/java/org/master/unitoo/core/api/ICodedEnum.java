@@ -15,5 +15,6 @@ public interface ICodedEnum<T> {
     T code();
 
     Class<T> type();
-    
+
+    boolean is(T code);
 }

@@ -14,6 +14,7 @@ public enum SecureLevel {
     None,
     Init,
     Preauth,
+    Authorized,
     Secured;
 
 }

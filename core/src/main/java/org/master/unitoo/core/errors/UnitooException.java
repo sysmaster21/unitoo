@@ -50,7 +50,11 @@ public class UnitooException extends IOException {
     @Override
     public String getMessage() {
         if (params != null) {
-            return String.format(super.getMessage(), params);
+            try {
+                return String.format(super.getMessage(), params);
+            } catch (Throwable t) {
+                return "INVALID FORMAT(" + t.getMessage() + "): " + super.getMessage();
+            }
         } else {
             return super.getMessage();
         }

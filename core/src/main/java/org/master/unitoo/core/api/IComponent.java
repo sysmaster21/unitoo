@@ -22,6 +22,8 @@ public interface IComponent {
 
     String name();
 
+    String internal();
+
     String description();
 
     String version();

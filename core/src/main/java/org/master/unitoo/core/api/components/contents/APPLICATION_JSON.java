@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.master.unitoo.core.api.components.mappers;
+package org.master.unitoo.core.api.components.contents;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,25 +18,27 @@ import org.master.unitoo.core.base.BaseDataContent;
  *
  * @author Andrey
  */
-@Component("MULTIPART_FORM_DATA")
-public class MULTIPART_CONTENT extends BaseDataContent {
+@Component("APPLICATION_JSON")
+public class APPLICATION_JSON extends BaseDataContent {
+
+    @Override
+    public boolean inParamsUsage() {
+        return true;
+    }
 
     @Override
     public ContentType contentType(String encoding) {
-        return ContentType.MULTIPART_FORM_DATA;
+        return ContentType.APPLICATION_JSON.withCharset(encoding);
     }
 
     @Override
     public void serialize(IBusinessObject object, OutputStream stream, IFormatter formatter) throws IOException {
+        formatter.json().serialize(object, stream, this);
     }
 
     @Override
     public <O extends IBusinessObject> O deserialize(Class<O> clazz, InputStream stream, IFormatter formatter) throws IOException {
-        try {
-            return clazz.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new IOException(e);
-        }
+        return formatter.json().deserialize(clazz, stream, this);
     }
 
 }

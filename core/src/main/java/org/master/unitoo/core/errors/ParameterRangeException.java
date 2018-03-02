@@ -12,6 +12,6 @@ package org.master.unitoo.core.errors;
 public class ParameterRangeException extends ParameterInvalidException {
 
     public ParameterRangeException(String name, double min, double max) {
-        super(SystemErrorCodes.UTS_ParameterRangeException, "Parameter %1$s not in range %2$d - %3$s", name, min, max);
+        super(SystemErrorCodes.UTS_ParameterRangeException, "Parameter %1$s not in range %2$d - %3$d", name, min, max);
     }
 }

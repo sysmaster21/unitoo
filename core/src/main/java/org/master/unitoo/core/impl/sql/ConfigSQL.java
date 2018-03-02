@@ -6,8 +6,6 @@
 package org.master.unitoo.core.impl.sql;
 
 import java.util.Date;
-import java.util.List;
-import org.master.sqlonfly.impl.SqlDefaultDataTable;
 import org.master.sqlonfly.interfaces.ISQLBatch;
 import org.master.unitoo.core.errors.DatabaseException;
 
@@ -24,7 +22,7 @@ public interface ConfigSQL extends ISQLBatch<ConfigSQL> {
      *      config
      *  where
      *      ConfigStorage = <#storage#>
-     *      ConfigValueChanged > <#date#>
+     *      and ConfigValueChanged > <#date#>
      * }
      *
      * @param storage VARCHAR(250)

@@ -158,13 +158,18 @@ public abstract class BaseLanguage implements ILanguage, IChangeListener {
     }
 
     @Override
+    public String internal() {
+        return context.internal();
+    }
+
+    @Override
     public IApplication app() {
         return context.application();
     }
 
     @Override
     public String info() {
-        return context.info();
+        return context.description();
     }
 
     @Override

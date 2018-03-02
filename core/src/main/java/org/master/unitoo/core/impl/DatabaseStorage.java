@@ -13,6 +13,7 @@ import org.master.unitoo.core.errors.StorageAccessException;
 import org.master.unitoo.core.errors.StorageCreateException;
 import org.master.unitoo.core.errors.StorageFlushException;
 import org.master.unitoo.core.errors.StorageLoadException;
+import org.master.unitoo.core.errors.TypeConvertExpection;
 
 /**
  *
@@ -29,7 +30,6 @@ public abstract class DatabaseStorage<T, P, M extends DatabaseExternalValuesMana
     private IChangeListener listener;
     private Date date;
 
-    @SuppressWarnings("OverridableMethodCallInConstructor")
     public DatabaseStorage(String name, M parent, T source) {
         this.manager = parent;
         this.source = source;
@@ -40,18 +40,18 @@ public abstract class DatabaseStorage<T, P, M extends DatabaseExternalValuesMana
         return manager;
     }
 
-    protected abstract Integer containsAttr(String storage, String code, String attrName) throws DatabaseException;
+    protected abstract Integer containsAttr(Object code, String attrName) throws DatabaseException;
 
-    protected abstract Integer containsKey(String storage, String code) throws DatabaseException;
+    protected abstract Integer containsKey(String code) throws DatabaseException;
 
     @Override
     public boolean hasValue(String name, P parent, Class type) throws StorageAccessException {
         try {
             Integer v;
             if (parent == null) {
-                v = containsKey(this.name, name);
+                v = containsKey(name);
             } else {
-                v = containsAttr(this.name, manager.app().format(manager.getItemCode(parent)), name);
+                v = containsAttr(manager.getItemCode(parent), name);
             }
             return v != null && v > 0;
         } catch (DatabaseException e) {
@@ -59,30 +59,30 @@ public abstract class DatabaseStorage<T, P, M extends DatabaseExternalValuesMana
         }
     }
 
-    protected abstract String getAttr(String storage, String code, String attrName) throws DatabaseException;
+    protected abstract Object getAttr(Object code, String attrName, Class type) throws DatabaseException, TypeConvertExpection;
 
-    protected abstract String getValue(String storage, String code) throws DatabaseException;
+    protected abstract Object getValue(String code, Class type) throws DatabaseException, TypeConvertExpection;
 
     @Override
     public Object getValue(String name, P parent, Class type) throws StorageAccessException {
         try {
             if (parent == null) {
-                return getValue(this.name, name);
+                return getValue(name, type);
             } else {
-                return getAttr(this.name, manager.app().format(manager.getItemCode(parent)), name);
+                return getAttr(manager.getItemCode(parent), name, type);
             }
-        } catch (DatabaseException e) {
+        } catch (DatabaseException | TypeConvertExpection e) {
             throw new StorageAccessException(name, e);
         }
     }
 
-    protected abstract int setAttr(String storage, String code, String attrName, Object value) throws DatabaseException;
+    protected abstract int setAttr(Object code, String attrName, Object value) throws DatabaseException;
 
-    protected abstract int addAttr(String storage, String code, String attrName, Object value) throws DatabaseException;
+    protected abstract int addAttr(Object code, String attrName, Object value) throws DatabaseException;
 
-    protected abstract int setValue(String storage, String code, Object value) throws DatabaseException;
+    protected abstract int setValue(String code, Object value) throws DatabaseException;
 
-    protected abstract int addValue(String storage, String code, Object value) throws DatabaseException;
+    protected abstract int addValue(String code, Object value) throws DatabaseException;
 
     @Override
     public void putValue(String name, Object value, P parent, Class type) throws StorageAccessException {
@@ -90,15 +90,15 @@ public abstract class DatabaseStorage<T, P, M extends DatabaseExternalValuesMana
             boolean present = hasValue(name, parent, type);
             if (parent == null) {
                 if (present) {
-                    addValue(this.name, name, value);
+                    setValue(name, value);
                 } else {
-                    setValue(this.name, name, value);
+                    addValue(name, value);
                 }
             } else {
                 if (present) {
-                    addAttr(this.name, manager.app().format(manager.getItemCode(parent)), name, value);
+                    setAttr(manager.getItemCode(parent), name, value);
                 } else {
-                    setAttr(this.name, manager.app().format(manager.getItemCode(parent)), name, value);
+                    addAttr(manager.getItemCode(parent), name, value);
                 }
             }
         } catch (DatabaseException e) {
@@ -124,22 +124,11 @@ public abstract class DatabaseStorage<T, P, M extends DatabaseExternalValuesMana
         return source;
     }
 
-    protected abstract Iterable<String> keys(String storage) throws DatabaseException;
-
-    @Override
-    public Iterable<String> keys() throws StorageAccessException {
-        try {
-            return keys(name);
-        } catch (DatabaseException e) {
-            throw new StorageAccessException(name, e);
-        }
-    }
-
-    protected abstract Integer changedAfter(String storage, Date date) throws DatabaseException;
+    protected abstract Integer changedAfter(Date date) throws DatabaseException;
 
     public void checkChanges() {
         try {
-            Integer cnt = changedAfter(name, date);
+            Integer cnt = changedAfter(date);
             if (cnt != null && cnt > 0) {
                 listener.onChanged();
             }
@@ -151,6 +140,10 @@ public abstract class DatabaseStorage<T, P, M extends DatabaseExternalValuesMana
     @Override
     public void listener(IChangeListener listener) {
         this.listener = listener;
+    }
+
+    public String name() {
+        return name;
     }
 
 }

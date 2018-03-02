@@ -86,6 +86,11 @@ public abstract class BaseLogger implements ILoggerFactory {
     }
 
     @Override
+    public String internal() {
+        return context.internal();
+    }
+
+    @Override
     public IApplication app() {
         return context.application();
     }

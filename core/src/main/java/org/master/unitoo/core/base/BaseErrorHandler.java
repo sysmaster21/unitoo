@@ -54,13 +54,18 @@ public abstract class BaseErrorHandler implements IErrorHandler {
     }
 
     @Override
+    public String internal() {
+        return context.internal();
+    }
+
+    @Override
     public IApplication app() {
         return context.application();
     }
 
     @Override
     public String info() {
-        return context.info();
+        return context.description();
     }
 
     @Override

@@ -11,6 +11,8 @@ import java.util.Date;
 import org.master.unitoo.core.api.annotation.Component;
 import org.master.unitoo.core.api.components.IConfigManager;
 import org.master.unitoo.core.errors.DatabaseException;
+import org.master.unitoo.core.errors.StorageAccessException;
+import org.master.unitoo.core.errors.TypeConvertExpection;
 import org.master.unitoo.core.impl.sql.ConfigSQL;
 import org.master.unitoo.core.server.ServerConfig;
 import org.master.unitoo.core.types.ComponentType;
@@ -48,55 +50,67 @@ public class DatabaseConfigManager extends DatabaseExternalValuesManager<ServerC
             this.sql = sql;
         }
 
-        @Override
-        protected Integer containsAttr(String storage, String code, String attrName) throws DatabaseException {
-            return sql.containsAttr(storage, code, attrName);
+        private String format(Object obj) {
+            return manager().app().format(obj);
+        }
+
+        private Object parse(String value, Class type) throws TypeConvertExpection {
+            return manager().app().parse(value, type);
         }
 
         @Override
-        protected Integer containsKey(String storage, String code) throws DatabaseException {
-            return sql.containsKey(storage, code);
+        protected Integer containsAttr(Object code, String attrName) throws DatabaseException {
+            return sql.containsAttr(name(), format(code), attrName);
         }
 
         @Override
-        protected String getAttr(String storage, String code, String attrName) throws DatabaseException {
-            return sql.getAttr(storage, code, attrName);
+        protected Integer containsKey(String code) throws DatabaseException {
+            return sql.containsKey(name(), code);
         }
 
         @Override
-        protected String getValue(String storage, String code) throws DatabaseException {
-            return sql.getValue(storage, code);
+        protected Object getAttr(Object code, String attrName, Class type) throws DatabaseException, TypeConvertExpection {
+            return parse(sql.getAttr(name(), format(code), attrName), type);
         }
 
         @Override
-        protected int setAttr(String storage, String code, String attrName, Object value) throws DatabaseException {
-            return sql.setAttr(storage, code, attrName, value);
+        protected Object getValue(String code, Class type) throws DatabaseException, TypeConvertExpection {
+            return parse(sql.getValue(name(), code), type);
         }
 
         @Override
-        protected int addAttr(String storage, String code, String attrName, Object value) throws DatabaseException {
-            return sql.addAttr(storage, code, attrName, value);
+        protected int setAttr(Object code, String attrName, Object value) throws DatabaseException {
+            return sql.setAttr(name(), format(code), attrName, manager().app().format(value));
         }
 
         @Override
-        protected int setValue(String storage, String code, Object value) throws DatabaseException {
-            return sql.setValue(storage, code, value);
+        protected int addAttr(Object code, String attrName, Object value) throws DatabaseException {
+            return sql.addAttr(name(), format(code), attrName, manager().app().format(value));
         }
 
         @Override
-        protected int addValue(String storage, String code, Object value) throws DatabaseException {
-            return sql.addValue(storage, code, value);
+        protected int setValue(String code, Object value) throws DatabaseException {
+            return sql.setValue(name(), code, manager().app().format(value));
         }
 
         @Override
-        protected Iterable<String> keys(String storage) throws DatabaseException {
-            String[] keys = sql.keys(storage);
-            return keys == null ? Collections.EMPTY_LIST : Arrays.asList(keys);
+        protected int addValue(String code, Object value) throws DatabaseException {
+            return sql.addValue(name(), code, manager().app().format(value));
         }
 
         @Override
-        protected Integer changedAfter(String storage, Date date) throws DatabaseException {
-            return sql.changedAfter(storage, date);
+        public Iterable<String> keys() throws StorageAccessException {
+            try {
+                String[] keys = sql.keys(name());
+                return keys == null ? Collections.EMPTY_LIST : Arrays.asList(keys);
+            } catch (DatabaseException e) {
+                throw new StorageAccessException(name(), e);
+            }
+        }
+
+        @Override
+        protected Integer changedAfter(Date date) throws DatabaseException {
+            return sql.changedAfter(name(), date);
         }
 
     }

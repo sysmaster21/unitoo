@@ -6,19 +6,26 @@
 package org.master.unitoo.core.api.util;
 
 import org.master.unitoo.core.api.components.ILanguage;
+import org.master.unitoo.core.errors.UnitooException;
 
 /**
  *
  * @author Andrey
- * @param <T>
  */
-public interface IUser<T> {
+public interface IUser {
 
-    T id();
+    Integer id();
+
+    ILanguage language();
+
+    void language(ILanguage language) throws UnitooException;
+
+    Integer company();
+
+    void company(Integer company) throws UnitooException;
 
     String login();
 
     String name();
 
-    ILanguage language();
 }

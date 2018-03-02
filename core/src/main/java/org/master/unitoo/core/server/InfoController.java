@@ -13,12 +13,14 @@ import org.master.unitoo.core.types.RequestMethod;
 import org.master.unitoo.core.api.annotation.Component;
 import org.master.unitoo.core.api.components.IController;
 import org.master.unitoo.core.api.annotation.Request;
+import org.master.unitoo.core.api.annotation.HTTP;
 
 /**
  *
  * @author Andrey
  */
-@Component(value = "server", url = "/server")
+@Component(value = "Server information")
+@HTTP(url = "/server")
 public class InfoController extends BaseController {
 
     @Request(value = "info", type = RequestMethod.GET)

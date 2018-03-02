@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.master.unitoo.core.api.components.mappers;
+package org.master.unitoo.core.api.components.contents;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,12 +18,17 @@ import org.master.unitoo.core.base.BaseDataContent;
  *
  * @author Andrey
  */
-@Component("TEXT_HTML")
-public class HTML_CONTENT extends BaseDataContent {
+@Component("TEXT_PLAIN")
+public class TEXT_PLAIN extends BaseDataContent {
+
+    @Override
+    public boolean inParamsUsage() {
+        return true;
+    }
 
     @Override
     public ContentType contentType(String encoding) {
-        return ContentType.TEXT_HTML.withCharset(encoding);
+        return ContentType.TEXT_PLAIN.withCharset(encoding);
     }
 
     @Override

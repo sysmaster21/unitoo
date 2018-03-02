@@ -16,6 +16,6 @@ public class AttributeCreateException extends UnitooException {
     }
 
     public AttributeCreateException(String name, Throwable t) {
-        super(SystemErrorCodes.UTS_AttributeCreateException, t, "Attribute %1$s failed to create", name);
+        super(SystemErrorCodes.UTS_AttributeCreateException, "Attribute %1$s failed to create", t, name);
     }
 }

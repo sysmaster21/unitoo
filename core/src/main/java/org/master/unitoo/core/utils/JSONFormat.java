@@ -9,6 +9,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -49,7 +50,7 @@ public class JSONFormat implements IObjectConvertor {
     public void serialize(IBusinessObject object, OutputStream stream, IDataContent content) throws IOException {
         try {
             convertor.content(content);
-            OutputStreamWriter writer = new OutputStreamWriter(stream, format.encoding());
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream, format.encoding()));
             gson.toJson(object, writer);
             writer.flush();
         } catch (JsonIOException e) {

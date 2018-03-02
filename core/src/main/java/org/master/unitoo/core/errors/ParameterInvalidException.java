@@ -17,6 +17,10 @@ public class ParameterInvalidException extends UnitooException {
         super(SystemErrorCodes.UTS_InvalidParameterException, "Parameter %1$s is invalid", name);
     }
 
+    public ParameterInvalidException(String name, Throwable t) {
+        super(SystemErrorCodes.UTS_InvalidParameterException, "Parameter %1$s is invalid", t, name);
+    }
+
     protected ParameterInvalidException(IErrorType code, String message, Throwable t, Object... params) {
         super(code, message, t, params);
     }

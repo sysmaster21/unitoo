@@ -16,6 +16,6 @@ public class AttributeGetException extends UnitooException {
     }
 
     public AttributeGetException(String name, Throwable t) {
-        super(SystemErrorCodes.UTS_AttributeGetException, t, "Attribute %1$s failed to get value", name);
+        super(SystemErrorCodes.UTS_AttributeGetException, "Attribute %1$s failed to get value", t, name);
     }
 }

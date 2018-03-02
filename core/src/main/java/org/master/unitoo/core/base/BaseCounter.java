@@ -219,13 +219,18 @@ public abstract class BaseCounter implements ICounter {
     }
 
     @Override
+    public String internal() {
+        return context.internal();
+    }
+
+    @Override
     public IApplication app() {
         return context.application();
     }
 
     @Override
     public String info() {
-        return context.info();
+        return context.description();
     }
 
     @Override
@@ -300,6 +305,11 @@ public abstract class BaseCounter implements ICounter {
         @Override
         public Class<String> type() {
             return String.class;
+        }
+
+        @Override
+        public boolean is(String code) {
+            return code != null && code.equals(this.code);
         }
 
     }

@@ -17,37 +17,37 @@ import org.master.unitoo.core.api.components.ILoggerFactory;
 public class ComponentContext {
 
     private final String version;
-    private final String descr;
+    private final String author;
+    private final String internal;
     private final String info;
-    private final String url;
     private final IApplication application;
     private final ServerConfig config;
     private final Class<? extends ILoggerFactory> logger;
     private final Class componentClass;
     private final IBootInfo boot;
 
-    public ComponentContext(String descr, String version, String info, String url, IApplication application, ServerConfig config, Class<? extends ILoggerFactory> logger, IBootInfo boot, Class componentClass) {
+    public ComponentContext(String author, String version, String info, String internal, IApplication application, ServerConfig config, Class<? extends ILoggerFactory> logger, IBootInfo boot, Class componentClass) {
         this.version = version;
-        this.descr = descr;
+        this.author = author;
         this.info = info;
-        this.url = url;
         this.application = application;
         this.config = config;
         this.logger = logger;
         this.boot = boot;
+        this.internal = internal;
         this.componentClass = componentClass;
     }
 
-    public String description() {
-        return descr;
+    public String author() {
+        return author;
     }
 
     public String version() {
         return version;
     }
 
-    public String url() {
-        return url;
+    public String internal() {
+        return internal;
     }
 
     public IApplication application() {
@@ -62,7 +62,7 @@ public class ComponentContext {
         return config;
     }
 
-    public String info() {
+    public String description() {
         return info;
     }
 
