@@ -9,8 +9,8 @@ import java.util.Map;
 import org.master.unitoo.core.api.components.IFormatter;
 import javax.servlet.ServletContextListener;
 import javax.servlet.http.HttpSession;
+import org.master.sqlonfly.core.SQLEngine;
 import org.master.sqlonfly.interfaces.ISQLBatch;
-import org.master.sqlonfly.interfaces.ISQLDataRow;
 import org.master.sqlonfly.interfaces.ISQLDataTable;
 import org.master.unitoo.core.api.components.IBackgroundTask;
 import org.master.unitoo.core.api.components.ILoggerFactory;
@@ -40,6 +40,9 @@ public interface IApplication extends ServletContextListener {
     String homeFolder();
 
     String version();
+
+    //-------------------------------------------------------------------------- Database
+    SQLEngine sql();
 
     //-------------------------------------------------------------------------- Registration
     void register(ISecurity security);
@@ -75,6 +78,10 @@ public interface IApplication extends ServletContextListener {
     IComponent component(ComponentType type, String name);
 
     <T extends IComponent> Iterable<T> components(Class<T> clazz);
+    
+    IControllerMethod method(String filter);
+    
+    Iterable<IControllerMethod> methods();
 
     //-------------------------------------------------------------------------- System
     void beforeRequest(IControllerMethod method, HttpSession session) throws AccessDenied, InvalidSession, NoSecurityException;

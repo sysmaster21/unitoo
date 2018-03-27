@@ -18,7 +18,7 @@ public class ComponentContext {
 
     private final String version;
     private final String author;
-    private final String internal;
+    private final String extKey;
     private final String info;
     private final IApplication application;
     private final ServerConfig config;
@@ -26,7 +26,7 @@ public class ComponentContext {
     private final Class componentClass;
     private final IBootInfo boot;
 
-    public ComponentContext(String author, String version, String info, String internal, IApplication application, ServerConfig config, Class<? extends ILoggerFactory> logger, IBootInfo boot, Class componentClass) {
+    public ComponentContext(String author, String version, String info, String extKey, IApplication application, ServerConfig config, Class<? extends ILoggerFactory> logger, IBootInfo boot, Class componentClass) {
         this.version = version;
         this.author = author;
         this.info = info;
@@ -34,7 +34,7 @@ public class ComponentContext {
         this.config = config;
         this.logger = logger;
         this.boot = boot;
-        this.internal = internal;
+        this.extKey = extKey;
         this.componentClass = componentClass;
     }
 
@@ -47,7 +47,7 @@ public class ComponentContext {
     }
 
     public String internal() {
-        return internal;
+        return extKey;
     }
 
     public IApplication application() {

@@ -54,7 +54,7 @@ public abstract class BaseErrorHandler implements IErrorHandler {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

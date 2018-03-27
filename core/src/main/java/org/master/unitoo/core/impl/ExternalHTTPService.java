@@ -650,7 +650,7 @@ public class ExternalHTTPService implements IHTTPService, InvocationHandler {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

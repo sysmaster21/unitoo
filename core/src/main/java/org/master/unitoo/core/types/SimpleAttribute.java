@@ -14,8 +14,8 @@ public class SimpleAttribute<T> extends CustomAttribute<T> {
 
     private T value;
 
-    public SimpleAttribute(String name, Class<T> type) {
-        super(name, type);
+    public SimpleAttribute(String name, String caption, Class<T> type) {
+        super(name, caption, type);
     }
 
     @Override

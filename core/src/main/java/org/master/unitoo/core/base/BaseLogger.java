@@ -86,7 +86,7 @@ public abstract class BaseLogger implements ILoggerFactory {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

@@ -16,15 +16,21 @@ import org.master.unitoo.core.errors.AttributeSetException;
 public abstract class CustomAttribute<T> {
 
     private final String name;
+    private final String caption;
     private final Class<T> type;
 
-    public CustomAttribute(String name, Class<T> type) {
+    public CustomAttribute(String name, String caption, Class<T> type) {
         this.name = name;
         this.type = type;
+        this.caption = caption;
     }
 
     public String name() {
         return name;
+    }
+
+    public String caption() {
+        return caption;
     }
 
     public Class<T> type() {

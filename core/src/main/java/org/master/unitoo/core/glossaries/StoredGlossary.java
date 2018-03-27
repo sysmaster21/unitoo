@@ -67,6 +67,11 @@ public abstract class StoredGlossary<C, T extends IStoredGlossaryItem<C>> extend
     protected abstract T createItem(C code);
 
     @Override
+    public T etalon() {
+        return createItem(null);
+    }
+
+    @Override
     @SuppressWarnings("UseSpecificCatch")
     protected void load(GlossaryLoader<T> loader) {
         startLock();

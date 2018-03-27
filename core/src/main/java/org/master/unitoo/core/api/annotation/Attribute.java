@@ -35,6 +35,8 @@ public @interface Attribute {
     String value() default "";
 
     String name() default "";
+    
+    String caption() default "";
 
     Decision escape() default Decision.Parent;
 

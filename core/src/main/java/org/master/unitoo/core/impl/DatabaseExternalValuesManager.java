@@ -8,6 +8,7 @@ package org.master.unitoo.core.impl;
 import java.util.concurrent.ConcurrentHashMap;
 import org.master.unitoo.core.api.IExternalStorage;
 import org.master.unitoo.core.base.BaseExternalValueManager;
+import org.master.unitoo.core.errors.UnitooException;
 import org.master.unitoo.core.server.DatabaseCheckTask;
 
 /**
@@ -20,12 +21,12 @@ public abstract class DatabaseExternalValuesManager<T, P> extends BaseExternalVa
 
     private final ConcurrentHashMap<T, DatabaseStorage> storages = new ConcurrentHashMap<>();
 
-    protected abstract DatabaseStorage create(T source);
+    protected abstract DatabaseStorage create(T source) throws UnitooException;
 
     public abstract Object getItemCode(Object item);
 
     @Override
-    public IExternalStorage<T, P> register(T source) {
+    public IExternalStorage<T, P> register(T source) throws UnitooException {
         DatabaseStorage storage = create(source);
         storages.put(source, storage);
         return storage;

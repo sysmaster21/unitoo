@@ -40,6 +40,14 @@ public abstract class DatabaseStorage<T, P, M extends DatabaseExternalValuesMana
         return manager;
     }
 
+    protected String format(Object obj) {
+        return manager().app().format(obj);
+    }
+
+    protected Object parse(String value, Class type) throws TypeConvertExpection {
+        return manager().app().parse(value, type);
+    }
+
     protected abstract Integer containsAttr(Object code, String attrName) throws DatabaseException;
 
     protected abstract Integer containsKey(String code) throws DatabaseException;

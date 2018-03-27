@@ -6,7 +6,6 @@
 package org.master.unitoo.core.glossaries;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -27,10 +26,8 @@ import org.master.unitoo.core.types.JavaFieldAttribute;
  */
 public class GlossaryItem<T> implements IGlossaryItem<T> {
 
-    protected static final String ATTR_DEFAULT = "__default";
     protected static final String ATTR_PARENT = "__parent";
 
-    @Attribute(name = ATTR_DEFAULT)
     private final String defLabel;
 
     private final T code;
@@ -63,7 +60,7 @@ public class GlossaryItem<T> implements IGlossaryItem<T> {
 
             for (AttrInfo info : list) {
                 try {
-                    CustomAttribute attr = new JavaFieldAttribute(info.name, info.field, this);
+                    CustomAttribute attr = new JavaFieldAttribute(info.name, info.caption, info.field, this);
                     attr.value(parent.app().parse(info.defValue, attr.type()));
                     attributes.put(info.name, attr);
                 } catch (UnitooException e) {
@@ -90,6 +87,7 @@ public class GlossaryItem<T> implements IGlossaryItem<T> {
                             field,
                             attribute.name().isEmpty() ? field.getName() : attribute.name(),
                             attribute.value(),
+                            attribute.caption(),
                             true,
                             true));
                 } catch (SecurityException e) {
@@ -121,7 +119,7 @@ public class GlossaryItem<T> implements IGlossaryItem<T> {
 
     @Override
     public String label(ILanguage language) {
-        return language.label(parent.name() + "." + parent.app().format(code));
+        return parent.label(code, language);
     }
 
     @Override
@@ -143,13 +141,15 @@ public class GlossaryItem<T> implements IGlossaryItem<T> {
         private final Field field;
         private final String name;
         private final String defValue;
+        private final String caption;
         private final boolean escape;
         private final boolean trim;
 
-        public AttrInfo(Field field, String name, String defValue, boolean escape, boolean trim) {
+        public AttrInfo(Field field, String name, String defValue, String caption, boolean escape, boolean trim) {
             this.field = field;
             this.name = name;
             this.defValue = defValue;
+            this.caption = caption;
             this.escape = escape;
             this.trim = trim;
         }

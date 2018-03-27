@@ -45,7 +45,7 @@ public abstract class BaseExternalValueManager<T, P> implements IExternalValuesM
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

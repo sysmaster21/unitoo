@@ -20,6 +20,8 @@ public interface IGlossary<C, T extends IGlossaryItem<C>> extends IComponent, IA
     Iterable<T> items();
 
     boolean cached();
+    
+    void reload();
 
     T item(C code);
 
@@ -28,5 +30,9 @@ public interface IGlossary<C, T extends IGlossaryItem<C>> extends IComponent, IA
     String label(C code, ILanguage language);
     
     Class<C> codeType();
+    
+    boolean i18n();
+    
+    T etalon();
 
 }

@@ -8,6 +8,7 @@ package org.master.unitoo.core.glossaries;
 /**
  *
  * @author Andrey
+ * @param <T>
  */
 public abstract class SimpleStoredGlossary<T extends SimpleStoredGlossaryItem> extends StoredGlossary<String, T> {
 

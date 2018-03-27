@@ -25,5 +25,5 @@ public @interface Component {
 
     String value() default ""; //information
     
-    String internal() default "";
+    String extKey() default "";
 }

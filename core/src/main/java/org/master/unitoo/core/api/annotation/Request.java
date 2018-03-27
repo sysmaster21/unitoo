@@ -25,6 +25,8 @@ import org.master.unitoo.core.api.IDataContent;
 public @interface Request {
 
     String value() default "";
+    
+    String descr() default "";
 
     RequestMethod[] type() default {
         RequestMethod.DEFAULT,

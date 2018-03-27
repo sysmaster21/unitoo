@@ -28,4 +28,5 @@ public interface IUser {
 
     String name();
 
+    void reload() throws UnitooException;
 }

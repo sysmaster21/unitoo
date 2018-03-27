@@ -60,7 +60,7 @@ public abstract class BaseBackgroundTask implements IBackgroundTask {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

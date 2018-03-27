@@ -13,11 +13,16 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import java.lang.reflect.Type;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Map.Entry;
 import org.master.unitoo.core.api.IBusinessField;
 import org.master.unitoo.core.api.IBusinessObject;
+import org.master.unitoo.core.api.ICodedEnum;
 import org.master.unitoo.core.api.IProcessSnapshot;
 import org.master.unitoo.core.api.components.IFormatter;
 import org.master.unitoo.core.api.IDataContent;
+import org.master.unitoo.core.errors.TypeConvertExpection;
 
 /**
  *
@@ -45,7 +50,8 @@ public class GsonJsonObjectConvertor implements JsonSerializer<IBusinessObject>,
             IProcessSnapshot info = content.beforeSerialize(src, field, formatter);
             try {
                 JsonElement element;
-                if (value instanceof String) {
+                if (value instanceof String
+                        || value instanceof ICodedEnum) {
                     value = formatter.format(value);
                     element = context.serialize(value);
                 } else {
@@ -72,7 +78,28 @@ public class GsonJsonObjectConvertor implements JsonSerializer<IBusinessObject>,
 
                     try {
                         Object value;
-                        value = context.deserialize(jobj.get(field.name()), field.type());
+                        if (Collection.class.isAssignableFrom(field.type())) {
+                            Collection collection = field.get(object) == null ? (Collection) field.type().newInstance() : (Collection) field.get(object);
+                            if (field.itemType() != null) {
+                                for (JsonElement element : jobj.get(field.name()).getAsJsonArray()) {
+                                    collection.add(context.deserialize(element, field.itemType()));
+                                }
+                            }
+                            value = collection;
+                        } else if (Map.class.isAssignableFrom(field.type())) {
+                            Map map = field.get(object) == null ? (Map) field.type().newInstance() : (Map) field.get(object);
+                            if (field.itemType() != null && field.keyType() != null) {
+                                for (Entry<String, JsonElement> entry : jobj.get(field.name()).getAsJsonObject().entrySet()) {
+                                    map.put(
+                                            formatter.parse(entry.getKey(), field.keyType()),
+                                            context.deserialize(entry.getValue(), field.itemType())
+                                    );
+                                }
+                            }
+                            value = map;
+                        } else {
+                            value = context.deserialize(jobj.get(field.name()), field.type());
+                        }
 
                         if (value instanceof String) {
                             value = formatter.format(value);
@@ -84,7 +111,7 @@ public class GsonJsonObjectConvertor implements JsonSerializer<IBusinessObject>,
                 }
             }
             return object;
-        } catch (IllegalAccessException | InstantiationException e) {
+        } catch (IllegalAccessException | InstantiationException | TypeConvertExpection e) {
             throw new JsonParseException(e);
         }
     }

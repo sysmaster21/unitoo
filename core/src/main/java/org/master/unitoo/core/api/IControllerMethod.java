@@ -34,5 +34,7 @@ public interface IControllerMethod {
     void process(RequestMethod type, String fromIP, HttpServletRequest req, HttpServletResponse resp, ILogger log) throws Exception;
 
     IFormatter getOutFormat();
+    
+    String descr();
 
 }

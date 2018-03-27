@@ -5,6 +5,8 @@
  */
 package org.master.unitoo.core.api;
 
+import org.master.unitoo.core.errors.UnitooException;
+
 /**
  *
  * @author Andrey
@@ -13,6 +15,6 @@ package org.master.unitoo.core.api;
  */
 public interface IExternalValuesManager<T, P> extends IComponent, IBootListener {
 
-    IExternalStorage<T, P> register(T source);
+    IExternalStorage<T, P> register(T source) throws UnitooException;
 
 }

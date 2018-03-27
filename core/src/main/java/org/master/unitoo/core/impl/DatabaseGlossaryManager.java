@@ -8,44 +8,51 @@ package org.master.unitoo.core.impl;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import org.master.unitoo.core.api.IGlossaryItem;
 import org.master.unitoo.core.api.annotation.Component;
-import org.master.unitoo.core.api.components.IConfigManager;
+import org.master.unitoo.core.api.components.IGlossaryManager;
+import org.master.unitoo.core.api.components.IStoredGlossary;
 import org.master.unitoo.core.errors.DatabaseException;
 import org.master.unitoo.core.errors.StorageAccessException;
 import org.master.unitoo.core.errors.TypeConvertExpection;
-import org.master.unitoo.core.impl.sql.ConfigSQL;
-import org.master.unitoo.core.server.ServerConfig;
+import org.master.unitoo.core.errors.UnitooException;
+import org.master.unitoo.core.impl.sql.GlossarySQL;
 import org.master.unitoo.core.types.ComponentType;
 
 /**
  *
  * @author Andrey
  */
-@Component("config database manager")
-public class DatabaseConfigManager extends DatabaseExternalValuesManager<ServerConfig, Object> implements IConfigManager {
+@Component("Glossary database manager")
+public class DatabaseGlossaryManager extends DatabaseExternalValuesManager<IStoredGlossary, IGlossaryItem> implements IGlossaryManager {
 
-    private ConfigSQL sql;
+    private GlossarySQL sql;
 
     @Override
-    protected ConfigProps create(ServerConfig source) {
-        return new ConfigProps("global", this, source, sql);
+    protected GlossaryProps create(IStoredGlossary source) throws UnitooException {
+        sql.initStorage(source.name());
+        return new GlossaryProps(source.name(), this, source, sql);
     }
 
     @Override
     public ComponentType type() {
-        return ComponentType.ConfigManager;
+        return ComponentType.GlossaryManager;
     }
 
     @Override
     public Object getItemCode(Object item) {
-        return item;
+        if (item instanceof IGlossaryItem) {
+            return ((IGlossaryItem) item).code();
+        } else {
+            return item;
+        }
     }
 
-    protected static class ConfigProps extends DatabaseStorage<ServerConfig, Object, DatabaseConfigManager> {
+    protected static class GlossaryProps extends DatabaseStorage<IStoredGlossary, IGlossaryItem, DatabaseGlossaryManager> {
 
-        private final ConfigSQL sql;
+        private final GlossarySQL sql;
 
-        public ConfigProps(String name, DatabaseConfigManager parent, ServerConfig source, ConfigSQL sql) {
+        public GlossaryProps(String name, DatabaseGlossaryManager parent, IStoredGlossary source, GlossarySQL sql) {
             super(name, parent, source);
             this.sql = sql;
         }
@@ -82,7 +89,7 @@ public class DatabaseConfigManager extends DatabaseExternalValuesManager<ServerC
 
         @Override
         protected int setValue(String code, Object value) throws DatabaseException {
-            return sql.setValue(name(), code, manager().app().format(value));
+            return sql.setValue(name(), code);
         }
 
         @Override

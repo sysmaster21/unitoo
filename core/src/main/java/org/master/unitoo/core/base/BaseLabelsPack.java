@@ -99,7 +99,7 @@ public abstract class BaseLabelsPack implements ILabelsPack {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

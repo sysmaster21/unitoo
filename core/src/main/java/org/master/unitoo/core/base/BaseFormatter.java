@@ -164,7 +164,7 @@ public abstract class BaseFormatter implements IFormatter {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

@@ -44,7 +44,7 @@ public abstract class BaseSettings implements ISettings {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

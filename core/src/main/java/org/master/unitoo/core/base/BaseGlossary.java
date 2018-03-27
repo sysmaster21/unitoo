@@ -18,6 +18,7 @@ import org.master.unitoo.core.impl.Label;
 import org.master.unitoo.core.server.Setting;
 import org.master.unitoo.core.types.ComponentContext;
 import org.master.unitoo.core.types.ComponentType;
+import org.master.unitoo.core.types.CustomAttribute;
 
 /**
  *
@@ -34,6 +35,11 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
     private ComponentContext context;
     private final ConcurrentHashMap<C, T> cache = new ConcurrentHashMap<>();
     private final ReentrantLock barrier = new ReentrantLock();
+
+    @Override
+    public boolean i18n() {
+        return true;
+    }
 
     @Override
     public void init(ComponentContext context) {
@@ -61,7 +67,7 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 
@@ -93,6 +99,24 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
 
     protected abstract void load(GlossaryLoader<T> loader);
 
+    @Override
+    public void reload() {
+        loadNow();
+    }
+
+    @Override
+    public T etalon() {
+        return null;
+    }
+
+    private void langRefresh(ILanguage language) {
+        try {
+            language.refresh();
+        } catch (UnitooException e) {
+            app().log().error("Language refresh failed: " + language.code(), e);
+        }
+    }
+
     protected void loadNow() {
         try {
             barrier.lock();
@@ -106,15 +130,34 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
                 }
             });
 
-            for (ILanguage language : app().components(ILanguage.class)) {
-                for (T item : cache.values()) {
-                    Label label = new Label(app(), name() + "." + item.code(), name(), item.defLabel());
-                    language.register(label);
+            if (i18n()) {
+                for (ILanguage language : app().components(ILanguage.class)) {
+                    for (T item : cache.values()) {
+                        language.register(new Label(app(), "_global.glossary." + name() + "." + item.code(), "" + item.code(), item.defLabel()));
+                    }
+
+                    T etalon = etalon();
+                    if (etalon != null) {
+                        for (CustomAttribute attr : etalon.attributes()) {
+                            language.register(new Label(app(), "_global.glossary." + name() + "._attr." + attr.name(), attr.name(), attr.caption()));
+                        }
+                    }
+
+                    language.register(new Label(app(), "_global.glossary." + name(), name(), description()));
+                    langRefresh(language);
                 }
-                try {
-                    language.refresh();
-                } catch (UnitooException e) {
-                    app().log().error("Language refresh failed: " + language.code(), e);
+            } else {
+                for (ILanguage language : app().components(ILanguage.class)) {
+                    language.register(new Label(context.application(), "_global.glossary." + name(), name(), description()));
+
+                    T etalon = etalon();
+                    if (etalon != null) {
+                        for (CustomAttribute attr : etalon.attributes()) {
+                            language.register(new Label(app(), "_global.glossary." + name() + "._attr." + attr.name(), attr.name(), attr.caption()));
+                        }
+                    }
+
+                    langRefresh(language);
                 }
             }
         } finally {
@@ -153,21 +196,20 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
 
     @Override
     public String label(C code) {
-        T item = item(code);
-        if (item == null) {
-            return null;
-        } else {
-            return item.label(app().process().language());
-        }
+        return label(code, app().process().language());
     }
 
     @Override
     public String label(C code, ILanguage language) {
         T item = item(code);
         if (item == null) {
-            return null;
+            return "" + code;
         } else {
-            return item.label(language);
+            if (i18n()) {
+                return language.label(name() + "." + app().format(code));
+            } else {
+                return item.defLabel();
+            }
         }
     }
 

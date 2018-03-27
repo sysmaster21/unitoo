@@ -98,7 +98,7 @@ public abstract class BaseDataContent implements IDataContent {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

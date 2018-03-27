@@ -18,8 +18,8 @@ public class JavaFieldAttribute extends CustomAttribute<Object> {
     private final Object owner;
     private final Field field;
 
-    public JavaFieldAttribute(String name, Field field, Object owner) {
-        super(name, (Class) field.getType());
+    public JavaFieldAttribute(String name, String caption, Field field, Object owner) {
+        super(name, caption, (Class) field.getType());
         this.owner = owner;
         this.field = field;
     }

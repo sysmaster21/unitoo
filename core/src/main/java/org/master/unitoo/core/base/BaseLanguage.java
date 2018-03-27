@@ -106,10 +106,10 @@ public abstract class BaseLanguage implements ILanguage, IChangeListener {
                         item.load((String) storage.getValue(item.key(), null, String.class));
                     }
                 } else {
-                    storage.putValue(item.key(), null, null, String.class);
+                    storage.putValue(item.key(), item.def(), null, String.class);
                 }
             }
-
+            
             storage.flush();
         } finally {
             barrier.unlock();
@@ -158,8 +158,13 @@ public abstract class BaseLanguage implements ILanguage, IChangeListener {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
+    }
+
+    @Override
+    public String code() {
+        return extKey();
     }
 
     @Override

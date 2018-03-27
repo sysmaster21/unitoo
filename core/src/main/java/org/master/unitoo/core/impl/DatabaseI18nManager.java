@@ -9,31 +9,31 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import org.master.unitoo.core.api.annotation.Component;
-import org.master.unitoo.core.api.components.IConfigManager;
+import org.master.unitoo.core.api.components.I18nManager;
+import org.master.unitoo.core.api.components.ILanguage;
 import org.master.unitoo.core.errors.DatabaseException;
 import org.master.unitoo.core.errors.StorageAccessException;
 import org.master.unitoo.core.errors.TypeConvertExpection;
-import org.master.unitoo.core.impl.sql.ConfigSQL;
-import org.master.unitoo.core.server.ServerConfig;
+import org.master.unitoo.core.impl.sql.I18nSQL;
 import org.master.unitoo.core.types.ComponentType;
 
 /**
  *
  * @author Andrey
  */
-@Component("config database manager")
-public class DatabaseConfigManager extends DatabaseExternalValuesManager<ServerConfig, Object> implements IConfigManager {
+@Component("i18n database manager")
+public class DatabaseI18nManager extends DatabaseExternalValuesManager<ILanguage, Object> implements I18nManager {
 
-    private ConfigSQL sql;
+    private I18nSQL sql;
 
     @Override
-    protected ConfigProps create(ServerConfig source) {
-        return new ConfigProps("global", this, source, sql);
+    protected TranslateProps create(ILanguage source) {
+        return new TranslateProps(source.code(), this, source, sql);
     }
 
     @Override
     public ComponentType type() {
-        return ComponentType.ConfigManager;
+        return ComponentType.I18nManager;
     }
 
     @Override
@@ -41,18 +41,18 @@ public class DatabaseConfigManager extends DatabaseExternalValuesManager<ServerC
         return item;
     }
 
-    protected static class ConfigProps extends DatabaseStorage<ServerConfig, Object, DatabaseConfigManager> {
+    protected static class TranslateProps extends DatabaseStorage<ILanguage, Object, DatabaseI18nManager> {
 
-        private final ConfigSQL sql;
+        private final I18nSQL sql;
 
-        public ConfigProps(String name, DatabaseConfigManager parent, ServerConfig source, ConfigSQL sql) {
+        public TranslateProps(String name, DatabaseI18nManager parent, ILanguage source, I18nSQL sql) {
             super(name, parent, source);
             this.sql = sql;
         }
 
         @Override
         protected Integer containsAttr(Object code, String attrName) throws DatabaseException {
-            return sql.containsAttr(name(), format(code), attrName);
+            return 0;
         }
 
         @Override
@@ -62,7 +62,7 @@ public class DatabaseConfigManager extends DatabaseExternalValuesManager<ServerC
 
         @Override
         protected Object getAttr(Object code, String attrName, Class type) throws DatabaseException, TypeConvertExpection {
-            return parse(sql.getAttr(name(), format(code), attrName), type);
+            return null;
         }
 
         @Override
@@ -72,12 +72,12 @@ public class DatabaseConfigManager extends DatabaseExternalValuesManager<ServerC
 
         @Override
         protected int setAttr(Object code, String attrName, Object value) throws DatabaseException {
-            return sql.setAttr(name(), format(code), attrName, manager().app().format(value));
+            return 0;
         }
 
         @Override
         protected int addAttr(Object code, String attrName, Object value) throws DatabaseException {
-            return sql.addAttr(name(), format(code), attrName, manager().app().format(value));
+            return 0;
         }
 
         @Override

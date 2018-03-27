@@ -47,7 +47,7 @@ public abstract class BaseValidator<T> implements IValidator<T> {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

@@ -6,13 +6,17 @@
 package org.master.unitoo.core.base;
 
 import java.lang.reflect.Proxy;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.master.sqlonfly.interfaces.ILogic;
+import org.master.sqlonfly.interfaces.IReturnableLogic;
 import org.master.unitoo.core.api.IApplication;
 import org.master.unitoo.core.api.IBootInfo;
 import org.master.unitoo.core.api.IInterfacedComponent;
 import org.master.unitoo.core.api.ILogger;
 import org.master.unitoo.core.api.components.IService;
+import org.master.unitoo.core.errors.DatabaseException;
 import org.master.unitoo.core.types.ComponentContext;
 import org.master.unitoo.core.types.ComponentType;
 import org.master.unitoo.core.types.RunnableState;
@@ -29,10 +33,26 @@ public class BaseService implements IService {
     private volatile RunnableState state = RunnableState.Stopped;
     private final AtomicInteger runCount = new AtomicInteger(0);
     private long stopFrom = 0;
-    private ArrayList<Class<? extends IInterfacedComponent>> interfaces = new ArrayList<>();
+    private final ArrayList<Class<? extends IInterfacedComponent>> interfaces = new ArrayList<>();
 
     public BaseService() {
         scanInterfaces(getClass());
+    }
+
+    public void transation(ILogic logic) throws DatabaseException {
+        try {
+            app().sql().transaction(logic);
+        } catch (SQLException e) {
+            throw new DatabaseException(e);
+        }
+    }
+
+    public <T> T transation(IReturnableLogic<T> logic) throws DatabaseException {
+        try {
+            return app().sql().transaction(logic);
+        } catch (SQLException e) {
+            throw new DatabaseException(e);
+        }
     }
 
     @Override
@@ -118,7 +138,7 @@ public class BaseService implements IService {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

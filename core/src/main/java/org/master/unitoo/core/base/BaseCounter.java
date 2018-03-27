@@ -219,7 +219,7 @@ public abstract class BaseCounter implements ICounter {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 

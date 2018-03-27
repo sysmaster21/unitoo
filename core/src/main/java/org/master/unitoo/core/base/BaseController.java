@@ -347,7 +347,7 @@ public abstract class BaseController implements IController {
     }
 
     @Override
-    public String internal() {
+    public String extKey() {
         return context.internal();
     }
 
@@ -396,6 +396,7 @@ public abstract class BaseController implements IController {
     private static class ControllerMethod implements IControllerMethod {
 
         private final String mapping;
+        private final String descr;
         private final boolean outEscape;
         private final boolean outTrim;
         private final boolean inEscape;
@@ -429,6 +430,7 @@ public abstract class BaseController implements IController {
             this.errorHanlerClass = rqMapping.errors();
             this.parent = parent;
             this.method = method;
+            this.descr = rqMapping.descr().isEmpty() ? this.mapping : rqMapping.descr();
             this.paramsFormatClass = rqMapping.format();
             this.responseFormatClass = rsMapping == null ? IFormatter.class : rsMapping.format();
             this.secureLevel = rqMapping.secure();
@@ -446,6 +448,11 @@ public abstract class BaseController implements IController {
             }
 
             params = new RequestParametersList(parent.app(), method, inEscape, inTrim);
+        }
+
+        @Override
+        public String descr() {
+            return descr;
         }
 
         @Override

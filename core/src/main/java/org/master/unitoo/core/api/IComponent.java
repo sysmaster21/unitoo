@@ -22,7 +22,7 @@ public interface IComponent {
 
     String name();
 
-    String internal();
+    String extKey();
 
     String description();
 

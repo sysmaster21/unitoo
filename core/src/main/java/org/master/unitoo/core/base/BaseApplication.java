@@ -180,9 +180,10 @@ public abstract class BaseApplication implements IApplication {
     private Timer timer;
     private SQLEngine sqlEngine;
     private final ConcurrentMap<String, IComponent> componentIndex = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, IComponent> componentInternalIndex = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, IComponent> componentExtKeyIndex = new ConcurrentHashMap<>();
     private final EnumMap<ComponentType, ConcurrentMap<String, IComponent>> components = new EnumMap<>(ComponentType.class);
     private final WeakHashMap<Thread, ThreadInfo> threads = new WeakHashMap();
+    private final ConcurrentMap<String, IControllerMethod> methods = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, IControllerMethod> mappings = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Label> labels = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, BusinessFieldList> businessFields = new ConcurrentHashMap<>();
@@ -201,17 +202,31 @@ public abstract class BaseApplication implements IApplication {
     }
 
     @Override
+    public IControllerMethod method(String filter) {
+        IControllerMethod method = methods.get(filter);
+        if (method == null) {
+            method = mappings.get(filter);
+        }
+        return method;
+    }
+
+    @Override
+    public Iterable<IControllerMethod> methods() {
+        return methods.values();
+    }
+
+    @Override
     public <T> T component(Class<T> iface, String name) {
         IComponent item = componentIndex.get(name);
         if (item == null) {
-            item = componentInternalIndex.get(name);
+            item = componentExtKeyIndex.get(name);
         }
 
         if (item == null && iface == ILanguage.class) {
             item = defaults().language();
         }
 
-        return item == null || !item.getClass().isAssignableFrom(iface) ? null : (T) item;
+        return item == null || !iface.isAssignableFrom(item.getClass()) ? null : (T) item;
     }
 
     @Override
@@ -223,7 +238,7 @@ public abstract class BaseApplication implements IApplication {
     public IComponent component(ComponentType type, String name) {
         IComponent item = componentIndex.get(name);
         if (item == null) {
-            item = componentInternalIndex.get(name);
+            item = componentExtKeyIndex.get(name);
         }
         return item == null || item.type() != type ? null : item;
     }
@@ -254,6 +269,7 @@ public abstract class BaseApplication implements IApplication {
 
                     ComponentContext ctxComponent = createComponentContext(clazz);
                     component.init(ctxComponent);
+                    componentExtKeyIndex.put(component.extKey(), component);
                     scanComponentBefore(component, component.getClass(), ctxComponent, true, gp);
                 } else {
                     log().warning("Unknown component type, or incorrect abstract modifier for: " + clazz.getName());
@@ -318,7 +334,7 @@ public abstract class BaseApplication implements IApplication {
         Component annComponent = (Component) clazz.getAnnotation(Component.class);
         Logger annLogger = (Logger) clazz.getAnnotation(Logger.class);
 
-        String internal = "";
+        String extKey = "";
         String author = null;
         String version = null;
         String info;
@@ -328,12 +344,12 @@ public abstract class BaseApplication implements IApplication {
             author = annComponent.author();
             version = annComponent.version();
             info = annComponent.value();
-            internal = annComponent.internal();
+            extKey = annComponent.extKey();
         } else {
             info = clazz.getName();
         }
 
-        internal = internal.isEmpty() ? clazz.getSimpleName() : internal;
+        extKey = extKey.isEmpty() ? clazz.getSimpleName() : extKey;
 
         if (annLogger != null) {
             logger = annLogger.value() == BaseLogger.class ? null : annLogger.value();
@@ -343,7 +359,7 @@ public abstract class BaseApplication implements IApplication {
                 author,
                 version,
                 info,
-                internal,
+                extKey,
                 this,
                 settings,
                 logger,
@@ -823,6 +839,7 @@ public abstract class BaseApplication implements IApplication {
     @Override
     public void register(IControllerMethod method) {
         mappings.put(method.mapping(), method);
+        methods.put(method.name(), method);
     }
 
     private void preloadSettings(InputStream in, Properties props) {
@@ -1118,7 +1135,7 @@ public abstract class BaseApplication implements IApplication {
                 }
                 return (T) value;
 
-            } else if (Character.class.isAssignableFrom(clazz)) {
+            } else if (Character.class.isAssignableFrom(clazz) || char.class.isAssignableFrom(clazz)) {
                 return value.isEmpty() ? null : (T) Character.valueOf(value.charAt(0));
 
             } else if (Time.class.isAssignableFrom(clazz)) {
@@ -1130,7 +1147,7 @@ public abstract class BaseApplication implements IApplication {
             } else if (Date.class.isAssignableFrom(clazz)) {
                 return (T) formatter.date().parse(value);
 
-            } else if (Boolean.class.isAssignableFrom(clazz)) {
+            } else if (Boolean.class.isAssignableFrom(clazz) || boolean.class.isAssignableFrom(clazz)) {
                 if ("true".equals(value) || "Y".equals(value) || "1".equals(value)) {
                     return (T) Boolean.TRUE;
                 } else {
@@ -1360,6 +1377,11 @@ public abstract class BaseApplication implements IApplication {
         }
     }
 
+    @Override
+    public SQLEngine sql() {
+        return sqlEngine;
+    }
+
     public void scanComponentAfter(IComponent component, Class clazz) {
         if (clazz.getSuperclass() != null) {
             scanComponentAfter(component, clazz.getSuperclass());
@@ -1435,7 +1457,7 @@ public abstract class BaseApplication implements IApplication {
     public void map(IBusinessObject dest, Map<String, Object> source) throws UnitooException {
         for (IBusinessField field : businessFields(dest.getClass())) {
             if (source.containsKey(field.name())) {
-                field.set(convert(source.get(field.name()), field.itemType()), dest);
+                field.set(convert(source.get(field.name()), field.type()), dest);
             }
         }
     }
@@ -1492,7 +1514,12 @@ public abstract class BaseApplication implements IApplication {
                     valueClass = (Class) ((ParameterizedType) t).getActualTypeArguments()[1];
                 } else {
                     keyClass = null;
-                    valueClass = (Class) ((ParameterizedType) t).getActualTypeArguments()[0];
+                    Type tp = ((ParameterizedType) t).getActualTypeArguments()[0];
+                    if (tp instanceof Class) {
+                        valueClass = (Class) tp;
+                    } else {
+                        valueClass = null;
+                    }
                 }
             } else {
                 keyClass = null;
