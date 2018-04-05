@@ -78,9 +78,9 @@ public interface IApplication extends ServletContextListener {
     IComponent component(ComponentType type, String name);
 
     <T extends IComponent> Iterable<T> components(Class<T> clazz);
-    
+
     IControllerMethod method(String filter);
-    
+
     Iterable<IControllerMethod> methods();
 
     //-------------------------------------------------------------------------- System
@@ -100,7 +100,11 @@ public interface IApplication extends ServletContextListener {
     //-------------------------------------------------------------------------- BusinessObjects
     Iterable<IBusinessField> businessFields(Class<? extends IBusinessObject> type);
 
+    Map<String, IBusinessField> businessFieldsMap(Class<? extends IBusinessObject> type);
+
     void map(IBusinessObject dest, ISQLDataTable source) throws UnitooException;
 
     void map(IBusinessObject dest, Map<String, Object> source) throws UnitooException;
+
+    Map<String, Object> map(IBusinessObject object) throws UnitooException;
 }

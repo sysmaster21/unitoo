@@ -22,7 +22,7 @@ public interface IGlossaryItem<T> {
     
     String label(ILanguage language);
 
-    String defLabel();
+    String defLabel(String langCode);
 
     Iterable<CustomAttribute> attributes();
 

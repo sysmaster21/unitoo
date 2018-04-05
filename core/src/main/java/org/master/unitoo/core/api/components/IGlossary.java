@@ -8,6 +8,7 @@ package org.master.unitoo.core.api.components;
 import org.master.unitoo.core.api.IAutowired;
 import org.master.unitoo.core.api.IComponent;
 import org.master.unitoo.core.api.IGlossaryItem;
+import org.master.unitoo.core.errors.UnitooException;
 
 /**
  *
@@ -20,19 +21,19 @@ public interface IGlossary<C, T extends IGlossaryItem<C>> extends IComponent, IA
     Iterable<T> items();
 
     boolean cached();
-    
-    void reload();
+
+    void reload() throws UnitooException;
 
     T item(C code);
 
     String label(C code);
 
     String label(C code, ILanguage language);
-    
+
     Class<C> codeType();
-    
+
     boolean i18n();
-    
+
     T etalon();
 
 }

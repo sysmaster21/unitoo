@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
@@ -186,7 +187,7 @@ public abstract class BaseApplication implements IApplication {
     private final ConcurrentMap<String, IControllerMethod> methods = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, IControllerMethod> mappings = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Label> labels = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, BusinessFieldList> businessFields = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, BusinessFieldMap> businessFields = new ConcurrentHashMap<>();
 
     protected abstract Class<? extends IGlossaryManager> glossaryManager();
 
@@ -1434,14 +1435,19 @@ public abstract class BaseApplication implements IApplication {
     }
 
     @Override
-    public Iterable<IBusinessField> businessFields(Class<? extends IBusinessObject> type) {
-        BusinessFieldList list = businessFields.get(type.getName());
-        if (list == null) {
-            list = new BusinessFieldList(this);
-            list.scan(type);
-            businessFields.put(type.getName(), list);
+    public Map<String, IBusinessField> businessFieldsMap(Class<? extends IBusinessObject> type) {
+        BusinessFieldMap map = businessFields.get(type.getName());
+        if (map == null) {
+            map = new BusinessFieldMap(this);
+            map.scan(type);
+            businessFields.put(type.getName(), map);
         }
-        return list;
+        return map;
+    }
+
+    @Override
+    public Iterable<IBusinessField> businessFields(Class<? extends IBusinessObject> type) {
+        return businessFieldsMap(type).values();
     }
 
     @Override
@@ -1462,11 +1468,23 @@ public abstract class BaseApplication implements IApplication {
         }
     }
 
-    private static class BusinessFieldList extends ArrayList<IBusinessField> {
+    @Override
+    public Map<String, Object> map(IBusinessObject object) throws UnitooException {
+        HashMap<String, Object> map = new HashMap<>();
+        for (IBusinessField field : businessFields(object.getClass())) {
+            Object value = field.get(object);
+            if (value != null) {
+                map.put(field.name(), value);
+            }
+        }
+        return map;
+    }
+
+    private static class BusinessFieldMap extends ConcurrentHashMap<String, IBusinessField> {
 
         private final IApplication app;
 
-        public BusinessFieldList(IApplication app) {
+        public BusinessFieldMap(IApplication app) {
             this.app = app;
         }
 
@@ -1484,7 +1502,7 @@ public abstract class BaseApplication implements IApplication {
                             attr != null ? attr.trim() : Decision.Parent,
                             attr != null ? attr.escape() : Decision.Parent,
                             app);
-                    add(bf);
+                    put(bf.name(), bf);
                 }
             }
         }

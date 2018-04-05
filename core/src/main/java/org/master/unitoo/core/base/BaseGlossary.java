@@ -88,7 +88,11 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
 
     @Override
     public Iterable<T> items() {
-        refresh();
+        try {
+            refresh();
+        } catch (UnitooException e) {
+            app().log().error(e);
+        }
         return cache.values();
     }
 
@@ -97,10 +101,10 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
         return cached.val() == null ? true : cached.val();
     }
 
-    protected abstract void load(GlossaryLoader<T> loader);
+    protected abstract void load(GlossaryLoader<C, T> loader) throws UnitooException;
 
     @Override
-    public void reload() {
+    public void reload() throws UnitooException {
         loadNow();
     }
 
@@ -117,23 +121,28 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
         }
     }
 
-    protected void loadNow() {
+    protected void loadNow() throws UnitooException {
         try {
             barrier.lock();
-            loaded = true;
             cache.clear();
 
-            load(new GlossaryLoader<T>() {
+            load(new GlossaryLoader<C, T>() {
                 @Override
                 public void add(T item) {
                     cache.put(item.code(), item);
                 }
+
+                @Override
+                public T get(C code) {
+                    return cache.get(code);
+                }
+
             });
 
             if (i18n()) {
                 for (ILanguage language : app().components(ILanguage.class)) {
                     for (T item : cache.values()) {
-                        language.register(new Label(app(), "_global.glossary." + name() + "." + item.code(), "" + item.code(), item.defLabel()));
+                        language.register(new Label(app(), "_global.glossary." + name() + "." + item.code(), "" + item.code(), item.defLabel(language.code())));
                     }
 
                     T etalon = etalon();
@@ -160,12 +169,13 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
                     langRefresh(language);
                 }
             }
+            loaded = true;
         } finally {
             barrier.unlock();
         }
     }
 
-    private void refresh() {
+    private void refresh() throws UnitooException {
         try {
             barrier.lock();
             if (!loaded || !cached()) {
@@ -189,7 +199,11 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
         if (code == null) {
             return null;
         } else {
-            refresh();
+            try {
+                refresh();
+            } catch (UnitooException e) {
+                app().log().error(e);
+            }
             return cache.get(code);
         }
     }
@@ -206,9 +220,9 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
             return "" + code;
         } else {
             if (i18n()) {
-                return language.label(name() + "." + app().format(code));
+                return language.label("_global.glossary." + name() + "." + app().format(code));
             } else {
-                return item.defLabel();
+                return item.defLabel(language.code());
             }
         }
     }
@@ -217,8 +231,10 @@ public abstract class BaseGlossary<C, T extends IGlossaryItem<C>> implements IGl
     public void destroy() {
     }
 
-    protected interface GlossaryLoader<T> {
+    protected interface GlossaryLoader<C, T extends IGlossaryItem<C>> {
 
         void add(T item);
+
+        T get(C code);
     }
 }

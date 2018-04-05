@@ -21,7 +21,7 @@ public abstract class EnumGlossary<T extends Enum> extends BaseGlossary<T, Gloss
     }
 
     @Override
-    protected void load(GlossaryLoader<GlossaryItem<T>> loader) {
+    protected void load(GlossaryLoader<T, GlossaryItem<T>> loader) {
         for (Object enumValue : clazz.getEnumConstants()) {
             GlossaryItem item = new GlossaryItem((T) enumValue, ((T) enumValue).name(), this);
             loader.add(item);

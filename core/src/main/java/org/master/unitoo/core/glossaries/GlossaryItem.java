@@ -33,6 +33,7 @@ public class GlossaryItem<T> implements IGlossaryItem<T> {
     private final T code;
     private final IGlossary<T, ? extends GlossaryItem<T>> parent;
     private final ConcurrentHashMap<String, CustomAttribute> attributes = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> defTrans = new ConcurrentHashMap<>();
 
     private final static ConcurrentHashMap<Class, AttrInfoList> ATTR_INDEX = new ConcurrentHashMap<>();
     private final static ReentrantLock ATTR_LOCK = new ReentrantLock();
@@ -46,6 +47,10 @@ public class GlossaryItem<T> implements IGlossaryItem<T> {
         this.parent = parent;
         this.defLabel = defLabel;
         scan();
+    }
+
+    public void putCustomTranslate(String lang, String text) {
+        defTrans.put(lang, text);
     }
 
     private void scan() {
@@ -108,8 +113,8 @@ public class GlossaryItem<T> implements IGlossaryItem<T> {
     }
 
     @Override
-    public String defLabel() {
-        return defLabel;
+    public String defLabel(String langCode) {
+        return defTrans.contains(langCode) ? defTrans.get(langCode) : defLabel;
     }
 
     @Override

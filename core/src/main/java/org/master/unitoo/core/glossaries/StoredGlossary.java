@@ -36,7 +36,11 @@ public abstract class StoredGlossary<C, T extends IStoredGlossaryItem<C>> extend
 
     @Override
     public void onChanged() {
-        loadNow();
+        try {
+            loadNow();
+        } catch (UnitooException e) {
+            app().log().error(e);
+        }
     }
 
     @Override
@@ -73,7 +77,7 @@ public abstract class StoredGlossary<C, T extends IStoredGlossaryItem<C>> extend
 
     @Override
     @SuppressWarnings("UseSpecificCatch")
-    protected void load(GlossaryLoader<T> loader) {
+    protected void load(GlossaryLoader<C, T> loader) {
         startLock();
         try {
             storage.load();
